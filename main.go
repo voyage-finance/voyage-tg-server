@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
@@ -43,6 +45,7 @@ func main() {
 
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
 		fmt.Println("chat id: ", update.Message.Chat.ID)
+		fmt.Println("message: ", update.Message.Text)
 
 		// Extract the command from the Message.
 		switch update.Message.Command() {
@@ -61,6 +64,20 @@ func main() {
 			msg.Text = "Command sign"
 		case "execute":
 			msg.Text = "Command execute"
+		case "submit":
+			args := update.Message.CommandArguments()
+			messageAndSignature := strings.Split(args, " ")
+			message, err := hexutil.Decode(messageAndSignature[0])
+			if err != nil {
+				msg.Text = "Wrong message"
+			}
+			signature, err := hexutil.Decode(messageAndSignature[1])
+			if err != nil {
+				msg.Text = "Wrong signature"
+			}
+			addr := s.RecoveryAddress(message, signature)
+
+			msg.Text = fmt.Sprintf("Address: %s", addr)
 		default:
 			msg.Text = "I don't know that command"
 		}

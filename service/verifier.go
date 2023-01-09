@@ -3,8 +3,11 @@ package service
 import (
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -21,4 +24,13 @@ func (s *Service) GenerateMessage(n int) string {
 	b = append(b, []byte(t)...)
 	r := sha256.Sum256(b)
 	return fmt.Sprintf("%x", r)
+}
+
+func (s *Service) RecoveryAddress(message []byte, signature []byte) string {
+	sigPublicKey, err := crypto.Ecrecover(message, signature)
+	if err != nil {
+		log.Fatal(err)
+	}
+	unmarshalPubkey, _ := crypto.UnmarshalPubkey(sigPublicKey)
+	return crypto.PubkeyToAddress(*unmarshalPubkey).String()
 }
