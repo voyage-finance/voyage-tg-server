@@ -8,11 +8,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"gorm.io/gorm"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 type Service struct {
+	DB *gorm.DB
 }
 
 func (s *Service) GenerateMessage(n int) string {

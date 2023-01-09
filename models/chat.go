@@ -1,7 +1,15 @@
 package models
 
 type Chat struct {
-	Id    string
-	Title string
-	Type  string
+	ChatId      string `json:"chat_id"`
+	Title       string `json:"title"`
+	Type        string `json:"type"`
+	SafeAddress string `json:"safe_address"`
+	Init        bool   `json:"init"`
+	Signers     string `json:"signers"`
+}
+
+type Signer struct {
+	Name    string `json:"name"`
+	Address string `json:"address"`
 }

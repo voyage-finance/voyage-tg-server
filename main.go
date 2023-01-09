@@ -21,8 +21,9 @@ func main() {
 
 	// Migrate the schema
 	db.AutoMigrate(&models.User{})
+	db.AutoMigrate(&models.Chat{})
 
-	s := service.Service{}
+	s := service.Service{DB: db}
 
 	bot, err := tgbotapi.NewBotAPI("5830732458:AAHtcj5oGrX8cbqjXiX_wNtS8tJXQVZojoo")
 	if err != nil {
@@ -53,9 +54,11 @@ func main() {
 			msg.Text = "I understand /this, /setup, /initiate, /sign and /execute"
 		case "this":
 			chatId := update.Message.Chat.ID
+			chat := s.QueryChat(chatId)
 			sender := update.Message.From.String()
-			msg.Text = fmt.Sprintf("Chat ID: %d, Sender: %s", chatId, sender)
+			msg.Text = fmt.Sprintf("Chat ID: %d, Sender: %s, Title: %s, Init: %t Signers: %s", chatId, sender, chat.Title, chat.Init, chat.Signers)
 		case "setup":
+			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			r := s.GenerateMessage(10)
 			msg.Text = "Please sign message: " + r
 		case "initiate":
@@ -66,18 +69,22 @@ func main() {
 			msg.Text = "Command execute"
 		case "submit":
 			args := update.Message.CommandArguments()
-			messageAndSignature := strings.Split(args, " ")
-			message, err := hexutil.Decode(messageAndSignature[0])
+			info := strings.Split(args, " ")
+			message, err := hexutil.Decode(info[1])
 			if err != nil {
 				msg.Text = "Wrong message"
 			}
-			signature, err := hexutil.Decode(messageAndSignature[1])
+			signature, err := hexutil.Decode(info[2])
 			if err != nil {
 				msg.Text = "Wrong signature"
 			}
 			addr := s.RecoveryAddress(message, signature)
-
-			msg.Text = fmt.Sprintf("Address: %s", addr)
+			ret := s.AddSigner(update.Message.Chat.ID, info[0], addr)
+			if ret != "" {
+				msg.Text = ret
+			} else {
+				msg.Text = fmt.Sprintf("Added signer, address: %s", addr)
+			}
 		default:
 			msg.Text = "I don't know that command"
 		}
