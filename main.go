@@ -47,7 +47,11 @@ func main() {
 		// Extract the command from the Message.
 		switch update.Message.Command() {
 		case "help":
-			msg.Text = "I understand /setup, /initiate, /sign and /execute"
+			msg.Text = "I understand /this, /setup, /initiate, /sign and /execute"
+		case "this":
+			chatId := update.Message.Chat.ID
+			sender := update.Message.From.String()
+			msg.Text = fmt.Sprintf("Chat ID: %d, Sender: %s", chatId, sender)
 		case "setup":
 			r := s.GenerateMessage(10)
 			msg.Text = "Please sign message: " + r
