@@ -56,7 +56,14 @@ func main() {
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
 			sender := update.Message.From.String()
-			msg.Text = fmt.Sprintf("Chat ID: %d, Sender: %s, Title: %s, Init: %t Signers: %s", chatId, sender, chat.Title, chat.Init, chat.Signers)
+			msg.Text = fmt.Sprintf(`Channel info:
+					Chat ID: %d
+					Init: %t
+					Sender: %s
+					Title: %s
+					Safe Address: https://gnosis-safe.io/app/eth:%s/home 
+					Signer: %s
+			`, chatId, chat.Init, sender, chat.Title, chat.SafeAddress, chat.Signers)
 		case "setup":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			r := s.GenerateMessage(10)
@@ -67,7 +74,7 @@ func main() {
 			msg.Text = "Command sign"
 		case "execute":
 			msg.Text = "Command execute"
-		case "submit":
+		case "submitowner":
 			args := update.Message.CommandArguments()
 			info := strings.Split(args, " ")
 			message, err := hexutil.Decode(info[1])
@@ -84,6 +91,14 @@ func main() {
 				msg.Text = ret
 			} else {
 				msg.Text = fmt.Sprintf("Added signer, address: %s", addr)
+			}
+		case "submitsafe":
+			args := update.Message.CommandArguments()
+			ret := s.AddSafeWallet(update.Message.Chat.ID, args)
+			if ret != "" {
+				msg.Text = ret
+			} else {
+				msg.Text = fmt.Sprintf("Added safe wallet, address: %s", args)
 			}
 		default:
 			msg.Text = "I don't know that command"

@@ -42,6 +42,17 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 	return ""
 }
 
+func (s *Service) AddSafeWallet(id int64, addr string) string {
+	log.Printf("AddSafeWallet id: %d, address: %s\n", id, addr)
+	var chat models.Chat
+	s.DB.First(&chat, "chat_id = ?", id)
+	if !chat.Init {
+		return "Please init first"
+	}
+	s.DB.Model(&chat).Where("chat_id = ?", id).Update("SafeAddress", addr)
+	return ""
+}
+
 func (s *Service) QueryChat(id int64) *models.Chat {
 	var chat models.Chat
 	s.DB.First(&chat, "chat_id = ?", fmt.Sprintf("%d", id))
