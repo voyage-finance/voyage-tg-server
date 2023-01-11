@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
@@ -23,7 +24,9 @@ func main() {
 	db.AutoMigrate(&models.User{})
 	db.AutoMigrate(&models.Chat{})
 
-	s := service.Service{DB: db}
+	client := resty.New()
+
+	s := service.Service{DB: db, Client: client}
 
 	bot, err := tgbotapi.NewBotAPI("5830732458:AAHtcj5oGrX8cbqjXiX_wNtS8tJXQVZojoo")
 	if err != nil {
@@ -68,6 +71,9 @@ func main() {
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			r := s.GenerateMessage(10)
 			msg.Text = "Please sign message: " + r
+		case "track":
+			msg.Text = s.GenerateQueueLink(update.Message.Chat.ID)
+
 		case "initiate":
 			msg.Text = "Command initiate"
 		case "sign":
@@ -100,6 +106,10 @@ func main() {
 			} else {
 				msg.Text = fmt.Sprintf("Added safe wallet, address: %s", args)
 			}
+		case "safequeue":
+			msg.Text = s.QueueTransaction(update.Message.Chat.ID)
+		case "safestatus":
+			msg.Text = s.Status(update.Message.Chat.ID)
 		default:
 			msg.Text = "I don't know that command"
 		}
