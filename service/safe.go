@@ -1,6 +1,9 @@
 package service
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 func (s *Service) QueueTransaction(id int64) string {
 	chat := s.QueryChat(id)
@@ -19,10 +22,10 @@ func (s *Service) GenerateQueueLink(id int64) string {
 }
 
 type StatusResp struct {
-	Address   string
-	Nonce     int64
-	Threshold int64
-	Owner     []string
+	Address   string   `json:"address"`
+	Nonce     int64    `json:"nonce"`
+	Threshold int64    `json:"threshold"`
+	Owners    []string `jsom:"owners"`
 }
 
 func (s *Service) Status(id int64) string {
@@ -33,5 +36,18 @@ func (s *Service) Status(id int64) string {
 		return err.Error()
 	}
 
-	return string(resp.Body())
+	var statusResp StatusResp
+	err = json.Unmarshal(resp.Body(), &statusResp)
+	if err != nil {
+		return err.Error()
+	}
+
+	return fmt.Sprintf(`Safe status
+			Address: %s
+			Nonce: %d
+			Threshold: %d
+			Owners: %+q
+
+	`, statusResp.Address, statusResp.Nonce, statusResp.Threshold, statusResp.Owners)
+
 }
