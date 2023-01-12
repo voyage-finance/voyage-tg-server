@@ -45,9 +45,9 @@ func (p *Parameter) String() string {
 	return fmt.Sprintf("[Name: %s, Type: %s, Value: %s]", p.Name, p.Type, p.Value)
 }
 
-func (s *Service) QueueTransaction(id int64) string {
+func (s *Service) QueueTransaction(id int64, limit int64) string {
 	chat := s.QueryChat(id)
-	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/all-transactions/?limit=1&executed=false&queued=true&trusted=true", chat.SafeAddress)
+	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/all-transactions/?limit=%d&executed=false&queued=true&trusted=true", chat.SafeAddress, limit)
 	resp, err := s.Client.R().EnableTrace().Get(r)
 	if err != nil {
 		return err.Error()
@@ -55,22 +55,27 @@ func (s *Service) QueueTransaction(id int64) string {
 
 	var queueTransactionResp QueueTransactionResp
 	json.Unmarshal(resp.Body(), &queueTransactionResp)
+	ret := "Pending Transactions: "
+	for index, qt := range queueTransactionResp.QT {
+		parameters := ""
+		for _, p := range qt.DataDecoded.Parameters {
+			parameters += p.String()
+		}
+		link := fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/transactions/multisig_%s_%s", chat.SafeAddress, chat.SafeAddress, *qt.SafeTxHash)
 
-	qt := queueTransactionResp.QT[0]
-	parameters := ""
-	for _, p := range qt.DataDecoded.Parameters {
-		parameters += p.String()
+		ret += fmt.Sprintf(`
+			Index: %d
+			Safe: %s
+			To: %s
+			Value: %s
+			SubmissionDate: %s
+			Modified: %s
+			SafeTxHash: %s
+			Method: %s
+			Parameters: %s
+			Sign/Submit it: %s
+			`, index, qt.Safe, qt.To, qt.Value, *qt.SubmissionDate, *qt.Modified, *qt.SafeTxHash, qt.DataDecoded.Method, parameters, link)
 	}
-	ret := fmt.Sprintf(`Queue Transactions:
-		Safe: %s
-		To: %s
-		Value: %s
-		SubmissionDate: %s
-		Modified: %s
-		SafeTxHash: %s
-		Method: %s
-		Parameters: %s
-		`, qt.Safe, qt.To, qt.Value, *qt.SubmissionDate, *qt.Modified, *qt.SafeTxHash, qt.DataDecoded.Method, parameters)
 
 	return ret
 

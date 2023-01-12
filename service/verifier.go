@@ -3,10 +3,10 @@ package service
 import (
 	"crypto/sha256"
 	"fmt"
-	"log"
 	"math/rand"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/go-resty/resty/v2"
 	"gorm.io/gorm"
@@ -31,10 +31,15 @@ func (s *Service) GenerateMessage(n int) string {
 }
 
 func (s *Service) RecoveryAddress(message []byte, signature []byte) string {
-	sigPublicKey, err := crypto.Ecrecover(message, signature)
-	if err != nil {
-		log.Fatal(err)
+	sig := signature
+
+	message = accounts.TextHash(message)
+	if sig[crypto.RecoveryIDOffset] == 27 || sig[crypto.RecoveryIDOffset] == 28 {
+		sig[crypto.RecoveryIDOffset] -= 27 // Transform yellow paper V from 27/28 to 0/1
 	}
-	unmarshalPubkey, _ := crypto.UnmarshalPubkey(sigPublicKey)
-	return crypto.PubkeyToAddress(*unmarshalPubkey).String()
+
+	recovered, _ := crypto.SigToPub(message, sig)
+
+	recoveredAddr := crypto.PubkeyToAddress(*recovered)
+	return recoveredAddr.Hex()
 }

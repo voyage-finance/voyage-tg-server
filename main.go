@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -28,7 +29,7 @@ func main() {
 
 	s := service.Service{DB: db, Client: client}
 
-	bot, err := tgbotapi.NewBotAPI("5830732458:AAHtcj5oGrX8cbqjXiX_wNtS8tJXQVZojoo")
+	bot, err := tgbotapi.NewBotAPI("5835886666:AAGt66BQaepE3VAGACDvGSmk2qFFUqo2fEY")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -67,11 +68,19 @@ func main() {
 			`, chatId, chat.Init, sender, chat.Title, chat.SafeAddress, chat.Signers)
 		case "setup":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
-			r := s.GenerateMessage(10)
+			message := "0x" + s.GenerateMessage(10)
+			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
 			msg.Text = "Please sign message: " + r
 
 		case "queue":
-			msg.Text = s.QueueTransaction(update.Message.Chat.ID)
+			args := update.Message.CommandArguments()
+			limit, err := strconv.ParseInt(args, 10, 64)
+			if err != nil {
+				msg.Text = "Wrong argument"
+			} else {
+				msg.Text = s.QueueTransaction(update.Message.Chat.ID, limit)
+			}
+
 		case "initiate":
 			msg.Text = "Command initiate"
 		case "sign":
