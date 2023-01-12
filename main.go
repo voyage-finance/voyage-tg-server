@@ -71,9 +71,10 @@ func main() {
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			r := s.GenerateMessage(10)
 			msg.Text = "Please sign message: " + r
-		case "track":
+		case "trackqueue":
 			msg.Text = s.GenerateQueueLink(update.Message.Chat.ID)
-
+		case "trackhistory":
+			msg.Text = s.GenerateHistoryLink(update.Message.Chat.ID)
 		case "initiate":
 			msg.Text = "Command initiate"
 		case "sign":
@@ -98,7 +99,7 @@ func main() {
 			} else {
 				msg.Text = fmt.Sprintf("Added signer, address: %s", addr)
 			}
-		case "submitsafe":
+		case "safesubmit":
 			args := update.Message.CommandArguments()
 			ret := s.AddSafeWallet(update.Message.Chat.ID, args)
 			if ret != "" {
