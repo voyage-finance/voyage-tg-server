@@ -48,8 +48,6 @@ func main() {
 		}
 
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-		fmt.Println("chat id: ", update.Message.Chat.ID)
-		fmt.Println("message: ", update.Message.Text)
 
 		// Extract the command from the Message.
 		switch update.Message.Command() {
@@ -71,10 +69,9 @@ func main() {
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			r := s.GenerateMessage(10)
 			msg.Text = "Please sign message: " + r
-		case "trackqueue":
-			msg.Text = s.GenerateQueueLink(update.Message.Chat.ID)
-		case "trackhistory":
-			msg.Text = s.GenerateHistoryLink(update.Message.Chat.ID)
+
+		case "queue":
+			msg.Text = s.QueueTransaction(update.Message.Chat.ID)
 		case "initiate":
 			msg.Text = "Command initiate"
 		case "sign":
@@ -107,10 +104,13 @@ func main() {
 			} else {
 				msg.Text = fmt.Sprintf("Added safe wallet, address: %s", args)
 			}
-		case "safequeue":
-			msg.Text = s.QueueTransaction(update.Message.Chat.ID)
+
 		case "safestatus":
 			msg.Text = s.Status(update.Message.Chat.ID)
+		case "safequeue":
+			msg.Text = s.GenerateQueueLink(update.Message.Chat.ID)
+		case "safehistory":
+			msg.Text = s.GenerateHistoryLink(update.Message.Chat.ID)
 		default:
 			msg.Text = "I don't know that command"
 		}

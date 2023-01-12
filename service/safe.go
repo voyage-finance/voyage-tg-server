@@ -83,7 +83,7 @@ func (s *Service) GenerateQueueLink(id int64) string {
 
 func (s *Service) GenerateHistoryLink(id int64) string {
 	chat := s.QueryChat(id)
-	return fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/transactions/history", chat.SafeAddress)
+	return fmt.Sprintf("Track transaction history here: https://gnosis-safe.io/app/eth:%s/transactions/history", chat.SafeAddress)
 }
 
 type StatusResp struct {
