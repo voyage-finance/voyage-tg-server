@@ -28,9 +28,15 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 	var signers []models.Signer
 	if chat.Signers != "" {
 		err := json.Unmarshal([]byte(chat.Signers), &signers)
-		log.Printf("AddSigner failed, error: %s\n", err.Error())
 		if err != nil {
+			log.Printf("AddSigner failed, error: %s\n", err.Error())
 			return "Get current signer failed"
+		}
+	}
+
+	for _, s := range signers {
+		if s.Address == address {
+			return ""
 		}
 	}
 	signers = append(signers, models.Signer{Name: name, Address: address})
