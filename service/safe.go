@@ -71,7 +71,7 @@ func (s *Service) QueryTokenBalance(id int64) string {
 	json.Unmarshal(resp.Body(), &balances)
 	fee, _ := decimal.NewFromString("1234")
 	fee.Shift(-2)
-	fmt.Println()
+	fmt.Println(fee.String())
 	ret := "Balances: "
 	for _, balance := range balances {
 		if len(balance.Token.Name) > 10 {

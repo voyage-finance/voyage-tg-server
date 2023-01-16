@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -67,15 +68,48 @@ func main() {
 		case "this":
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
-			sender := update.Message.From.String()
-			msg.Text = fmt.Sprintf(`Channel info:
-					Chat ID: %d
-					Init: %t
-					Sender: %s
-					Title: %s
-					Safe Address: https://gnosis-safe.io/app/eth:%s/home 
-					Signer: %s
-			`, chatId, chat.Init, sender, chat.Title, chat.SafeAddress, chat.Signers)
+
+			// 1. Safe address should be bold
+			var e1 tgbotapi.MessageEntity
+			e1.Type = "bold"
+			e1.Offset = 2
+			e1.Length = 13
+			msg.Entities = append(msg.Entities, e1)
+
+			// 2. Address should be hypelink
+			var e2 tgbotapi.MessageEntity
+			e2.Type = "code"
+			e2.Offset = 16
+			e2.Length = 53
+			e2.URL = fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", chat.SafeAddress)
+			msg.Entities = append(msg.Entities, e2)
+
+			// 3. Link button to gnosis safe wallet
+			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("Link", fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", chat.SafeAddress)),
+				),
+			)
+
+			// 4. Owners should be bold
+			var e3 tgbotapi.MessageEntity
+			e3.Type = "bold"
+			e3.Offset = 68
+			e3.Length = 7
+			msg.Entities = append(msg.Entities, e3)
+
+			msg.Text = fmt.Sprintln("🔓 Safe address")
+			msg.Text += fmt.Sprintf("\neth:%s", strings.ToLower(chat.SafeAddress))
+			msg.Text += "\n"
+			msg.Text += fmt.Sprintln("\n🔑  Owners")
+
+			var ss []models.Signer
+			_ = json.Unmarshal([]byte(chat.Signers), &ss)
+			for i, s := range ss {
+				msg.Text += fmt.Sprintf("\n%d. @%s - %s", i+1, s.Name, s.Address)
+			}
+
+			msg.ReplyMarkup = safeButton
 		case "verify":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			message := "0x" + s.GenerateMessage(10)
