@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/shopspring/decimal"
 )
 
@@ -103,9 +104,11 @@ func (s *Service) QueryTokenBalance(id int64) string {
 			formatBalance, _ := decimal.NewFromString(balance.Balance)
 			formatBalance = formatBalance.Shift(0 - int32(balance.Token.Decimals))
 			formatBalance = formatBalance.Truncate(4)
+			fValue, _ := formatBalance.Float64()
+			hValue := humanize.Commaf(fValue)
 			ret += fmt.Sprintf(`
 			%d. $%s - %s
-			`, index, balance.Token.Symbol, formatBalance)
+			`, index, balance.Token.Symbol, hValue)
 			index++
 		}
 	}
