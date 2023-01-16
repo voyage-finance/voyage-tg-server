@@ -41,8 +41,52 @@ type Parameter struct {
 	Value string
 }
 
+type TokenBalance struct {
+	TokenAddress string
+	Token        Token
+	Balance      string
+}
+
+type Token struct {
+	Name     string
+	Symbol   string
+	Decimals int64
+	LogoUri  string
+}
+
 func (p *Parameter) String() string {
 	return fmt.Sprintf("[Name: %s, Type: %s, Value: %s]", p.Name, p.Type, p.Value)
+}
+
+func (s *Service) QueryTokenBalance(id int64) string {
+	chat := s.QueryChat(id)
+	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/balances/?trusted=false&exclude_spam=false", chat.SafeAddress)
+	resp, err := s.Client.R().EnableTrace().Get(r)
+	if err != nil {
+		return err.Error()
+	}
+	var balances []TokenBalance
+	json.Unmarshal(resp.Body(), &balances)
+	ret := "Balances: "
+	for _, balance := range balances {
+		if len(balance.Token.Name) > 10 {
+			continue
+		}
+		if balance.Token.Name == "" {
+			balance.Token.Name = "ETH"
+		}
+		if balance.Token.Symbol == "" {
+			balance.Token.Symbol = "ETH"
+		}
+		ret += fmt.Sprintf(`
+		Name: %s
+		Symbol: %s
+		Decimas: %d
+		Balance: %s
+		`, balance.Token.Name, balance.Token.Symbol, balance.Token.Decimals, balance.Balance)
+	}
+	return ret
+
 }
 
 func (s *Service) QueueTransaction(id int64, limit int64) string {

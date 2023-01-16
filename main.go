@@ -71,7 +71,7 @@ func main() {
 			message := "0x" + s.GenerateMessage(10)
 			r := fmt.Sprintf("\nhttps://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
 			msg.Text = "To verify your address please sign message: \n" + r
-			msg.Text += "\n\nAfterwards, please submit following the format: submitowner message signature"
+			msg.Text += "\n\nAfterwards, please submit the signatue as following format: submitowner message signature"
 		case "queue":
 			args := update.Message.CommandArguments()
 			limit, err := strconv.ParseInt(args, 10, 64)
@@ -80,7 +80,9 @@ func main() {
 			} else {
 				msg.Text = s.QueueTransaction(update.Message.Chat.ID, limit)
 			}
-
+		case "balance":
+			chatId := update.Message.Chat.ID
+			msg.Text = s.QueryTokenBalance(chatId)
 		case "initiate":
 			msg.Text = "Command initiate"
 		case "sign":
