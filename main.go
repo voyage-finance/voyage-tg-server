@@ -113,9 +113,14 @@ func main() {
 		case "verify":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			message := "0x" + s.GenerateMessage(10)
-			r := fmt.Sprintf("\nhttps://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
-			msg.Text = "To verify your address please sign message: \n" + r
-			msg.Text += "\n\nAfterwards, please submit the signatue as following format: submitowner message signature"
+			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
+			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("Link", r),
+				),
+			)
+			msg.ReplyMarkup = safeButton
+			msg.Text = "Please verify your account address via Sign-In With Ethereum."
 		case "queue":
 			args := update.Message.CommandArguments()
 			limit, err := strconv.ParseInt(args, 10, 64)
