@@ -102,6 +102,7 @@ func (s *Service) QueryTokenBalance(id int64) string {
 		if m[strings.ToLower(balance.Token.Symbol)] {
 			formatBalance, _ := decimal.NewFromString(balance.Balance)
 			formatBalance = formatBalance.Shift(0 - int32(balance.Token.Decimals))
+			formatBalance = formatBalance.Truncate(4)
 			ret += fmt.Sprintf(`
 			%d. $%s - %s
 			`, index, balance.Token.Symbol, formatBalance)
