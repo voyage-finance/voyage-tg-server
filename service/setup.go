@@ -18,6 +18,10 @@ func (s *Service) SetupChat(id int64, title string) {
 	}
 }
 
+func (s *Service) AddPendingVerification(message string, chatId string, name string, address string) {
+
+}
+
 func (s *Service) AddSigner(id int64, name string, address string) string {
 	log.Printf("AddSigner id: %d, name: %s, address: %s\n", id, name, address)
 	var chat models.Chat

@@ -132,6 +132,11 @@ func main() {
 		case "balance":
 			chatId := update.Message.Chat.ID
 			msg.Text = s.QueryTokenBalance(chatId)
+			var e tgbotapi.MessageEntity
+			e.Type = "bold"
+			e.Offset = 2
+			e.Length = 16
+			msg.Entities = append(msg.Entities, e)
 		case "submitowner":
 			args := update.Message.CommandArguments()
 			info := strings.Split(args, " ")

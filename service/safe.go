@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/shopspring/decimal"
 )
@@ -56,6 +57,12 @@ type Token struct {
 	LogoUri  string
 }
 
+type Currency struct {
+	Id     string `json:"id"`
+	Symbol string `json:"symbol"`
+	Name   string `json:"name"`
+}
+
 func (p *Parameter) String() string {
 	return fmt.Sprintf("[Name: %s, Type: %s, Value: %s]", p.Name, p.Type, p.Value)
 }
@@ -69,26 +76,37 @@ func (s *Service) QueryTokenBalance(id int64) string {
 	}
 	var balances []TokenBalance
 	json.Unmarshal(resp.Body(), &balances)
-	fee, _ := decimal.NewFromString("1234")
-	fee.Shift(-2)
-	fmt.Println(fee.String())
-	ret := "Balances: "
+	supportedCurrencies, err := s.Client.R().EnableTrace().Get("https://api.coingecko.com/api/v3/coins/list")
+	if err != nil {
+		return err.Error()
+	}
+	var currencies []Currency
+	json.Unmarshal(supportedCurrencies.Body(), &currencies)
+	m := make(map[string]bool)
+	for _, c := range currencies {
+		m[c.Symbol] = true
+	}
+
+	ret := "💰 Account Balance\n"
+	index := 0
 	for _, balance := range balances {
-		if len(balance.Token.Name) > 10 {
-			continue
-		}
 		if balance.Token.Name == "" {
 			balance.Token.Name = "ETH"
 		}
 		if balance.Token.Symbol == "" {
 			balance.Token.Symbol = "ETH"
 		}
-		ret += fmt.Sprintf(`
-		Name: %s
-		Symbol: %s
-		Decimas: %d
-		Balance: %s
-		`, balance.Token.Name, balance.Token.Symbol, balance.Token.Decimals, balance.Balance)
+		if balance.Token.Decimals == 0 {
+			balance.Token.Decimals = 18
+		}
+		if m[strings.ToLower(balance.Token.Symbol)] {
+			formatBalance, _ := decimal.NewFromString(balance.Balance)
+			formatBalance = formatBalance.Shift(0 - int32(balance.Token.Decimals))
+			ret += fmt.Sprintf(`
+			%d. $%s - %s
+			`, index, balance.Token.Symbol, formatBalance)
+			index++
+		}
 	}
 	return ret
 

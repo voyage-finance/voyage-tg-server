@@ -13,3 +13,10 @@ type Signer struct {
 	Name    string `json:"name"`
 	Address string `json:"address"`
 }
+
+type PendingVerification struct {
+	Message string `json:"message"`
+	ChatId  string `json:"chat_id"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
+}
