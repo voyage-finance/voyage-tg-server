@@ -66,12 +66,12 @@ func main() {
 					Safe Address: https://gnosis-safe.io/app/eth:%s/home 
 					Signer: %s
 			`, chatId, chat.Init, sender, chat.Title, chat.SafeAddress, chat.Signers)
-		case "setup":
+		case "verify":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			message := "0x" + s.GenerateMessage(10)
-			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
-			msg.Text = "Please sign message: " + r
-
+			r := fmt.Sprintf("\nhttps://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
+			msg.Text = "To verify your address please sign message: \n" + r
+			msg.Text += "\n\nAfterwards, please submit following the format: submitowner message signature"
 		case "queue":
 			args := update.Message.CommandArguments()
 			limit, err := strconv.ParseInt(args, 10, 64)
