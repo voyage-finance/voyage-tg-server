@@ -96,21 +96,26 @@ func main() {
 		case "submitowner":
 			args := update.Message.CommandArguments()
 			info := strings.Split(args, " ")
-			message, err := hexutil.Decode(info[1])
-			if err != nil {
-				msg.Text = "Wrong message"
-			}
-			signature, err := hexutil.Decode(info[2])
-			if err != nil {
-				msg.Text = "Wrong signature"
-			}
-			addr := s.RecoveryAddress(message, signature)
-			ret := s.AddSigner(update.Message.Chat.ID, info[0], addr)
-			if ret != "" {
-				msg.Text = ret
+			if len(info) < 2 {
+				msg.Text = "Wrong arguments"
 			} else {
-				msg.Text = fmt.Sprintf("Added signer, address: %s", addr)
+				message, err := hexutil.Decode(info[1])
+				if err != nil {
+					msg.Text = "Wrong message"
+				}
+				signature, err := hexutil.Decode(info[2])
+				if err != nil {
+					msg.Text = "Wrong signature"
+				}
+				addr := s.RecoveryAddress(message, signature)
+				ret := s.AddSigner(update.Message.Chat.ID, info[0], addr)
+				if ret != "" {
+					msg.Text = ret
+				} else {
+					msg.Text = fmt.Sprintf("Added signer, address: %s", addr)
+				}
 			}
+
 		case "submitsafe":
 			args := update.Message.CommandArguments()
 			ret := s.AddSafeWallet(update.Message.Chat.ID, args)

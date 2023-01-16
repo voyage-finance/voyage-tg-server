@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/shopspring/decimal"
 )
 
 type QueueTransactionResp struct {
@@ -67,6 +69,9 @@ func (s *Service) QueryTokenBalance(id int64) string {
 	}
 	var balances []TokenBalance
 	json.Unmarshal(resp.Body(), &balances)
+	fee, _ := decimal.NewFromString("1234")
+	fee.Shift(-2)
+	fmt.Println()
 	ret := "Balances: "
 	for _, balance := range balances {
 		if len(balance.Token.Name) > 10 {
