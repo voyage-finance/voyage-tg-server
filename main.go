@@ -53,7 +53,17 @@ func main() {
 		// Extract the command from the Message.
 		switch update.Message.Command() {
 		case "help":
-			msg.Text = "I understand /this, /setup, /initiate, /sign and /execute"
+			msg.Text = `Commands:
+					/this: show current wallet info
+					/verify: generate random message to sign
+					/submitowner: submit message and signature info to complete verify process
+					/submitsafe: submit gnosis safe wallet address
+					/queue: check transactions in pending pool
+					/balance: check token balances
+					/safestatus: check wallet status
+					/safequeue: generate link to queue UI
+					/safehistory: generate link to history UI
+			`
 		case "this":
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
@@ -83,12 +93,6 @@ func main() {
 		case "balance":
 			chatId := update.Message.Chat.ID
 			msg.Text = s.QueryTokenBalance(chatId)
-		case "initiate":
-			msg.Text = "Command initiate"
-		case "sign":
-			msg.Text = "Command sign"
-		case "execute":
-			msg.Text = "Command execute"
 		case "submitowner":
 			args := update.Message.CommandArguments()
 			info := strings.Split(args, " ")
@@ -107,7 +111,7 @@ func main() {
 			} else {
 				msg.Text = fmt.Sprintf("Added signer, address: %s", addr)
 			}
-		case "safesubmit":
+		case "submitsafe":
 			args := update.Message.CommandArguments()
 			ret := s.AddSafeWallet(update.Message.Chat.ID, args)
 			if ret != "" {
