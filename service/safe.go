@@ -88,7 +88,7 @@ func (s *Service) QueryTokenBalance(id int64) string {
 	}
 
 	ret := "💰 Account Balance\n"
-	index := 0
+	index := 1
 	for _, balance := range balances {
 		if balance.Token.Name == "" {
 			balance.Token.Name = "ETH"

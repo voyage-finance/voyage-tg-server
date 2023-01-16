@@ -106,7 +106,7 @@ func main() {
 			var ss []models.Signer
 			_ = json.Unmarshal([]byte(chat.Signers), &ss)
 			for i, s := range ss {
-				msg.Text += fmt.Sprintf("\n%d. @%s - %s", i+1, s.Name, s.Address)
+				msg.Text += fmt.Sprintf("\n%d. @%s - %s\n", i+1, s.Name, s.Address)
 			}
 
 			msg.ReplyMarkup = safeButton
