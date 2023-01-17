@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/voyage-finance/voyage-tg-server/config"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
 	"gorm.io/driver/sqlite"
@@ -18,6 +20,7 @@ import (
 )
 
 func main() {
+	config.Init()
 	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
@@ -31,7 +34,7 @@ func main() {
 
 	s := service.Service{DB: db, Client: client}
 
-	bot, err := tgbotapi.NewBotAPI("5835886666:AAGt66BQaepE3VAGACDvGSmk2qFFUqo2fEY")
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_KEY"))
 	if err != nil {
 		log.Panic(err)
 	}
