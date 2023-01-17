@@ -3,9 +3,11 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/dustin/go-humanize"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/shopspring/decimal"
 )
 
@@ -70,12 +72,15 @@ func (p *Parameter) String() string {
 
 func (s *Service) QueryTokenBalance(id int64) string {
 	chat := s.QueryChat(id)
-	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/balances/?trusted=false&exclude_spam=false", chat.SafeAddress)
+	addr := common.HexToAddress(chat.SafeAddress)
+	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/balances/?trusted=false&exclude_spam=false", addr.Hex())
+	log.Println("QueryTokenBalance request: ", r)
 	resp, err := s.Client.R().EnableTrace().Get(r)
 	if err != nil {
 		return err.Error()
 	}
 	var balances []TokenBalance
+	log.Println("QueryTokenBalance balances: ", balances)
 	json.Unmarshal(resp.Body(), &balances)
 	supportedCurrencies, err := s.Client.R().EnableTrace().Get("https://api.coingecko.com/api/v3/coins/list")
 	if err != nil {

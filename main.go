@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -58,7 +59,7 @@ func main() {
 					/this: show current wallet info
 					/verify: generate random message to sign
 					/submitowner: submit message and signature info to complete verify process
-					/submitsafe: submit gnosis safe wallet address
+					/setup: submit gnosis safe wallet address
 					/queue: check transactions in pending pool
 					/balance: check token balances
 					/safestatus: check wallet status
@@ -81,13 +82,14 @@ func main() {
 			e2.Type = "code"
 			e2.Offset = 16
 			e2.Length = 53
-			e2.URL = fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", chat.SafeAddress)
+			addr := common.HexToAddress(chat.SafeAddress)
+			e2.URL = fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", addr.Hex())
 			msg.Entities = append(msg.Entities, e2)
 
 			// 3. Link button to gnosis safe wallet
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("Link", fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", chat.SafeAddress)),
+					tgbotapi.NewInlineKeyboardButtonURL("Link", fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", addr.Hex())),
 				),
 			)
 
@@ -99,7 +101,7 @@ func main() {
 			msg.Entities = append(msg.Entities, e3)
 
 			msg.Text = fmt.Sprintln("🔓 Safe address")
-			msg.Text += fmt.Sprintf("\neth:%s", strings.ToLower(chat.SafeAddress))
+			msg.Text += fmt.Sprintf("\neth:%s", addr.Hex())
 			msg.Text += "\n"
 			msg.Text += fmt.Sprintln("\n🔑  Owners")
 
@@ -160,7 +162,7 @@ func main() {
 				}
 			}
 
-		case "submitsafe":
+		case "setup":
 			args := update.Message.CommandArguments()
 			ret := s.AddSafeWallet(update.Message.Chat.ID, args)
 			if ret != "" {

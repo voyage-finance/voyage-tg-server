@@ -54,6 +54,9 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 
 func (s *Service) AddSafeWallet(id int64, addr string) string {
 	log.Printf("AddSafeWallet id: %d, address: %s\n", id, addr)
+	if addr == "" {
+		return "Wrong address"
+	}
 	var chat models.Chat
 	s.DB.First(&chat, "chat_id = ?", id)
 	if !chat.Init {
