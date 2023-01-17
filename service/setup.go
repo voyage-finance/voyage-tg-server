@@ -3,15 +3,16 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-
 	"github.com/voyage-finance/voyage-tg-server/models"
+	"log"
+	"strconv"
 )
 
 func (s *Service) SetupChat(id int64, title string) {
 	log.Printf("SetupChat id: %d, title: %s\n", id, title)
 	var chat models.Chat
-	s.DB.First(&chat, "chat_id = ?", id)
+	s.DB.Model(models.Chat{ChatId: strconv.FormatInt(id, 10)}).First(&chat)
+	//s.DB.First(&chat, "chat_id = '?'", id)
 	if !chat.Init {
 		log.Println("start creating chat...")
 		s.DB.Create(&models.Chat{ChatId: fmt.Sprintf("%d", id), Title: title, Init: true})
@@ -25,7 +26,8 @@ func (s *Service) AddPendingVerification(message string, chatId string, name str
 func (s *Service) AddSigner(id int64, name string, address string) string {
 	log.Printf("AddSigner id: %d, name: %s, address: %s\n", id, name, address)
 	var chat models.Chat
-	s.DB.First(&chat, "chat_id = ?", id)
+	s.DB.Model(models.Chat{ChatId: strconv.FormatInt(id, 10)}).First(&chat)
+	log.Printf("here-----%v", chat)
 	if !chat.Init {
 		return "Please init first"
 	}
@@ -48,17 +50,17 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 	if err != nil {
 		return "Marshal signers faled"
 	}
-	s.DB.Model(&chat).Where("chat_id = ?", id).Update("Signers", signerStr)
+	s.DB.Model(&chat).Where("chat_id = ?", strconv.FormatInt(id, 10)).Update("Signers", signerStr)
 	return ""
 }
 
 func (s *Service) AddSafeWallet(id int64, addr string) string {
-	log.Printf("AddSafeWallet id: %d, address: %s\n", id, addr)
+	log.Printf("AddSafeWallet id: %d, address: %s\n", strconv.FormatInt(id, 10), addr)
 	if addr == "" {
 		return "Wrong address"
 	}
 	var chat models.Chat
-	s.DB.First(&chat, "chat_id = ?", id)
+	s.DB.Model(models.Chat{ChatId: strconv.FormatInt(id, 10)}).First(&chat)
 	if !chat.Init {
 		return "Please init first"
 	}

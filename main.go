@@ -15,13 +15,26 @@ import (
 	"github.com/voyage-finance/voyage-tg-server/config"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
 	config.Init()
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	dsn := fmt.Sprintf("host=%v "+
+		"user=%v "+
+		"password=%v "+
+		"dbname=%v "+
+		"port=%v "+
+		"sslmode=disable "+
+		"TimeZone=Asia/Almaty",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("DB_PORT"),
+	)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}

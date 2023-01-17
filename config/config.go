@@ -16,11 +16,12 @@ func Init() {
 	}
 	exPath += "/config/"
 
-	bot_env, exists := os.LookupEnv("BOT_ENV")
+	botEnv, exists := os.LookupEnv("BOT_ENV")
 	if !exists {
-		bot_env = "dev"
+		botEnv = "dev"
 	}
-	err = godotenv.Load(exPath+".env."+bot_env+".local", exPath+".env."+bot_env)
+	envFile := fmt.Sprintf("%v.env.%v", exPath, botEnv)
+	err = godotenv.Load(envFile+".local", envFile)
 
 	if err != nil {
 		log.Fatal("Error loading env files", err)
