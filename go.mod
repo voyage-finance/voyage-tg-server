@@ -3,6 +3,7 @@ module github.com/voyage-finance/voyage-tg-server
 go 1.19
 
 require (
+	github.com/PullRequestInc/go-gpt3 v1.1.11 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect

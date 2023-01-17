@@ -83,13 +83,13 @@ func main() {
 			e2.Offset = 16
 			e2.Length = 53
 			addr := common.HexToAddress(chat.SafeAddress)
-			e2.URL = fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", addr.Hex())
+			e2.URL = fmt.Sprintf("https://app.safe.global/eth:%s/home", addr.Hex())
 			msg.Entities = append(msg.Entities, e2)
 
 			// 3. Link button to gnosis safe wallet
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("Link", fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", addr.Hex())),
+					tgbotapi.NewInlineKeyboardButtonURL("Link", e2.URL),
 				),
 			)
 
@@ -177,6 +177,28 @@ func main() {
 			msg.Text = s.GenerateQueueLink(update.Message.Chat.ID)
 		case "safehistory":
 			msg.Text = s.GenerateHistoryLink(update.Message.Chat.ID)
+		case "ai":
+			args := update.Message.CommandArguments()
+			var request models.AIRequest
+			request.Model = "text-davinci-003"
+			request.Prompt = args
+			request.Temperature = 0
+			request.MaxTokens = 1000
+
+			rs, _ := json.Marshal(request)
+			resp, err := s.Client.R().
+				SetHeader("Authorization", fmt.Sprintf("Bearer %s", "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")).
+				SetHeader("Content-Type", "application/json").
+				SetBody(string(rs)).
+				Post("https://api.openai.com/v1/completions")
+			if err != nil {
+				msg.Text = err.Error()
+			} else {
+				var rsp models.AIResponse
+				json.Unmarshal(resp.Body(), &rsp)
+				msg.Text = rsp.Choices[0].Text
+			}
+
 		default:
 			msg.Text = "I don't know that command"
 		}
