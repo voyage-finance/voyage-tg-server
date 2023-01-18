@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/voyage-finance/voyage-tg-server/http_server"
 	"log"
 	"os"
 	"strconv"
@@ -40,10 +41,12 @@ func main() {
 	}
 
 	// Migrate the schema
-	db.AutoMigrate(&models.User{})
-	db.AutoMigrate(&models.Chat{})
+	//db.AutoMigrate(&models.User{})
+	//db.AutoMigrate(&models.Chat{})
 
 	client := resty.New()
+
+	go http_server.HandleRequests(db)
 
 	s := service.Service{DB: db, Client: client}
 
@@ -75,7 +78,7 @@ func main() {
 					/this: show current wallet info
 					/verify: generate random message to sign
 					/submitowner: submit message and signature info to complete verify process
-					/setup: submit gnosis safe wallet address
+					/setup: submit gnosis safe wallet address, e.g: 0x......
 					/queue: check transactions in pending pool
 					/balance: check token balances
 					/safestatus: check wallet status
@@ -85,7 +88,7 @@ func main() {
 		case "this":
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
-
+			fmt.Println(chat)
 			// 1. Safe address should be bold
 			var e1 tgbotapi.MessageEntity
 			e1.Type = "bold"

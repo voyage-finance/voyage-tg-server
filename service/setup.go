@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"log"
 	"strconv"
@@ -11,11 +10,10 @@ import (
 func (s *Service) SetupChat(id int64, title string) {
 	log.Printf("SetupChat id: %d, title: %s\n", id, title)
 	var chat models.Chat
-	s.DB.Model(models.Chat{ChatId: strconv.FormatInt(id, 10)}).First(&chat)
-	//s.DB.First(&chat, "chat_id = '?'", id)
+	s.DB.First(&chat, "chat_id = ?", id)
 	if !chat.Init {
 		log.Println("start creating chat...")
-		s.DB.Create(&models.Chat{ChatId: fmt.Sprintf("%d", id), Title: title, Init: true})
+		s.DB.Create(&models.Chat{ChatId: id, Title: title, Init: true})
 	}
 }
 
@@ -26,8 +24,7 @@ func (s *Service) AddPendingVerification(message string, chatId string, name str
 func (s *Service) AddSigner(id int64, name string, address string) string {
 	log.Printf("AddSigner id: %d, name: %s, address: %s\n", id, name, address)
 	var chat models.Chat
-	s.DB.Model(models.Chat{ChatId: strconv.FormatInt(id, 10)}).First(&chat)
-	log.Printf("here-----%v", chat)
+	s.DB.First(&chat, "chat_id = ?", id)
 	if !chat.Init {
 		return "Please init first"
 	}
@@ -60,7 +57,7 @@ func (s *Service) AddSafeWallet(id int64, addr string) string {
 		return "Wrong address"
 	}
 	var chat models.Chat
-	s.DB.Model(models.Chat{ChatId: strconv.FormatInt(id, 10)}).First(&chat)
+	s.DB.First(&chat, "chat_id = ?", id)
 	if !chat.Init {
 		return "Please init first"
 	}
@@ -70,6 +67,6 @@ func (s *Service) AddSafeWallet(id int64, addr string) string {
 
 func (s *Service) QueryChat(id int64) *models.Chat {
 	var chat models.Chat
-	s.DB.First(&chat, "chat_id = ?", fmt.Sprintf("%d", id))
+	s.DB.First(&chat, "chat_id = ?", id)
 	return &chat
 }
