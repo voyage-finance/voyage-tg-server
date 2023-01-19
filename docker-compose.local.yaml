@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  app:
+    image: ${BOT_IMAGE}
+    restart: "always"
+    ports:
+      - "${HTTP_SERVER_PORT}:${HTTP_SERVER_PORT}"
+    volumes:
+      - ".:/src/github.com/voyage-finance/voyage-tg-server"
+    networks:
+      - "bot_network"
+    command: "go run main.go"
+
+networks:
+  bot_network:
+    external:
+      name: "${NETWORK_NAME}"

@@ -18,5 +18,7 @@ func HandleRequests(s service.Service) {
 	routes.OnboardingRoute(router, s)
 
 	// server run
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", os.Getenv("HTTP_SERVER_PORT")), router))
+	port := os.Getenv("HTTP_SERVER_PORT")
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), router))
+	fmt.Printf("Bot-Server is running under the port: %v", port)
 }
