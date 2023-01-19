@@ -255,26 +255,22 @@ type StatusResp struct {
 	Owners    []string `jsom:"owners"`
 }
 
-func (s *Service) Status(id int64) string {
-	chat := s.QueryChat(id)
-	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/", chat.SafeAddress)
-	resp, err := s.Client.R().EnableTrace().Get(r)
-	if err != nil {
-		return err.Error()
+func (s *Service) Status(chatId int64) []string {
+	chat := s.QueryChat(chatId)
+	network := "mainnet"
+	if chat.Chain == "matic" {
+		network = "polygon"
 	}
+	r := fmt.Sprintf("https://safe-transaction-%s.safe.global/api/v1/safes/%s/", network, chat.SafeAddress)
+	resp, _ := s.Client.R().EnableTrace().Get(r)
 
 	var statusResp StatusResp
-	err = json.Unmarshal(resp.Body(), &statusResp)
-	if err != nil {
-		return err.Error()
+	_ = json.Unmarshal(resp.Body(), &statusResp)
+	// make lower cased
+	for k, v := range statusResp.Owners {
+		// to modify the value at index k in the slice
+		// we assign the new value to names[k]
+		statusResp.Owners[k] = strings.ToLower(v)
 	}
-
-	return fmt.Sprintf(`Safe status
-			Address: %s
-			Nonce: %d
-			Threshold: %d
-			Owners: %+q
-
-	`, statusResp.Address, statusResp.Nonce, statusResp.Threshold, statusResp.Owners)
-
+	return statusResp.Owners
 }

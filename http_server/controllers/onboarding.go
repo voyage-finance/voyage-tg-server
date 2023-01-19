@@ -10,8 +10,10 @@ import (
 	"github.com/thedevsaddam/govalidator"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
+	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 	"net/http"
+	"strings"
 )
 
 func Test(s service.Service) http.HandlerFunc {
@@ -94,6 +96,16 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 			json.NewEncoder(rw).Encode(fmt.Sprintf("No user in system with id = %v", signMessage.UserID))
 			return
 		}
+
+		// 5.0 check whether signing address exists in Safe UI
+		owners := s.Status(signMessage.ChatID) // lowered in slice
+		addr = strings.ToLower(addr)           // lowered addr
+		if !slices.Contains(owners, addr) {
+			rw.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(rw).Encode(fmt.Sprintf("This is not owner %v", addr))
+			return
+		}
+
 		ret := s.AddSigner(signMessage.ChatID, user.UserName, addr)
 		if ret != "" {
 			response = ret

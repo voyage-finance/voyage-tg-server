@@ -11,6 +11,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/shopspring/decimal v1.3.1
 	github.com/thedevsaddam/govalidator v1.9.10
+	golang.org/x/exp v0.0.0-20220426173459-3bcf042a4bf5
 	gorm.io/driver/postgres v1.4.6
 	gorm.io/driver/sqlite v1.4.4
 	gorm.io/gorm v1.24.3
