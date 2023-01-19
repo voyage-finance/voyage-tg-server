@@ -43,12 +43,13 @@ func main() {
 	// Migrate the schema
 	//db.AutoMigrate(&models.User{})
 	//db.AutoMigrate(&models.Chat{})
+	//db.AutoMigrate(&models.SignMessage{})
 
 	client := resty.New()
 
-	go http_server.HandleRequests(db)
-
 	s := service.Service{DB: db, Client: client}
+
+	go http_server.HandleRequests(s)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_KEY"))
 	if err != nil {
@@ -132,9 +133,10 @@ func main() {
 
 			msg.ReplyMarkup = safeButton
 		case "verify":
-			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
-			message := "0x" + s.GenerateMessage(10)
-			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
+			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
+			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
+			message := signMessage.Message
+			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s&msg_id=%v", message, update.Message.From.String(), signMessage.ID)
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
 					tgbotapi.NewInlineKeyboardButtonURL("Link", r),
@@ -206,7 +208,7 @@ func main() {
 
 			rs, _ := json.Marshal(request)
 			resp, err := s.Client.R().
-				SetHeader("Authorization", fmt.Sprintf("Bearer %s", "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")).
+				SetHeader("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_TOKEN"))).
 				SetHeader("Content-Type", "application/json").
 				SetBody(string(rs)).
 				Post("https://api.openai.com/v1/completions")
