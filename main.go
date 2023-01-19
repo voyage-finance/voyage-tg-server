@@ -12,7 +12,6 @@ import (
 	"unicode/utf16"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/config"
@@ -101,13 +100,9 @@ func main() {
 			msg.Text = `Commands:
 					/this: show current wallet info
 					/verify: generate random message to sign
-					/submitowner: submit message and signature info to complete verify process
 					/setup: submit gnosis safe wallet address, e.g: 0x......
 					/queue: check transactions in pending pool
 					/balance: check token balances
-					/safestatus: check wallet status
-					/safequeue: generate link to queue UI
-					/safehistory: generate link to history UI
 			`
 		case "this":
 			chatId := update.Message.Chat.ID
@@ -179,28 +174,6 @@ func main() {
 			e.Offset = 2
 			e.Length = 16
 			msg.Entities = append(msg.Entities, e)
-		case "submitowner":
-			args := update.Message.CommandArguments()
-			info := strings.Split(args, " ")
-			if len(info) < 2 {
-				msg.Text = "Wrong arguments"
-			} else {
-				message, err := hexutil.Decode(info[1])
-				if err != nil {
-					msg.Text = "Wrong message"
-				}
-				signature, err := hexutil.Decode(info[2])
-				if err != nil {
-					msg.Text = "Wrong signature"
-				}
-				addr := s.RecoveryAddress(message, signature)
-				ret := s.AddSigner(update.Message.Chat.ID, info[0], addr)
-				if ret != "" {
-					msg.Text = ret
-				} else {
-					msg.Text = fmt.Sprintf("Added signer, address: %s", addr)
-				}
-			}
 
 		case "setup":
 			args := update.Message.CommandArguments()
@@ -216,13 +189,6 @@ func main() {
 					msg.Text = fmt.Sprintf("Added safe wallet, address: %s", args)
 				}
 			}
-
-		case "safestatus":
-			msg.Text = s.Status(update.Message.Chat.ID)
-		case "safequeue":
-			msg.Text = s.GenerateQueueLink(update.Message.Chat.ID)
-		case "safehistory":
-			msg.Text = s.GenerateHistoryLink(update.Message.Chat.ID)
 		case "ai":
 			args := update.Message.CommandArguments()
 			var request models.AIRequest

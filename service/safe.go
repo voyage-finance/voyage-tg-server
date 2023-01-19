@@ -184,7 +184,36 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 		link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=multisig_%s_%s", chat.Chain, common.HexToAddress(chat.SafeAddress), common.HexToAddress(chat.SafeAddress), safeTxHash)
 
 		if !qt.IsExecuted && qt.TxType == "MULTISIG_TRANSACTION" {
-			if qt.Data == nil {
+			tokenInfo, exist := s.Tokens[strings.ToLower(qt.To)]
+			// erc20 transfer
+			if exist {
+				if tokenInfo.TokenType == "ERC20" {
+					var to string
+					var amount string
+					for _, p := range qt.DataDecoded.Parameters {
+						if p.Name == "to" {
+							to = p.Value
+						} else if p.Name == "value" {
+							amount = p.Value
+						}
+					}
+					s2 := fmt.Sprintf("\n%d Transfer %s $%s to %s\n", index, s.ParseBalance(amount, int32(tokenInfo.Decimals)), tokenInfo.Symbol, to)
+					ret += s2
+					s3 := fmt.Sprintf("\nSigning Threshold: %d/%d\n", len(qt.Confirmations), qt.ConfirmationsRequired)
+					ret += s3
+					s4 := fmt.Sprintln("✍️ Sign/Submit it!")
+					ret += s4
+					var e tgbotapi.MessageEntity
+					e.Type = "text_link"
+					e.URL = link
+					e.Offset = len(utf16.Encode([]rune(s2+s3))) + startOffset
+					startOffset += len(utf16.Encode([]rune(s2 + s3)))
+					e.Length = len(utf16.Encode([]rune(s4)))
+					startOffset += e.Length
+					m.Entities = append(m.Entities, e)
+				}
+			} else {
+				// todo could be native transfer or alt coin transfer
 				// indicate it is a native transaction
 				s2 := fmt.Sprintf("\n%d Transfer %s $%s to %s\n", index, s.ParseBalance(qt.Value, 18), chat.Chain, qt.To)
 				ret += s2
@@ -200,35 +229,6 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 				e.Length = len(utf16.Encode([]rune(s4)))
 				startOffset += e.Length
 				m.Entities = append(m.Entities, e)
-			} else {
-				tokenInfo, exist := s.Tokens[strings.ToLower(qt.To)]
-				if exist {
-					if tokenInfo.TokenType == "ERC20" {
-						var to string
-						var amount string
-						for _, p := range qt.DataDecoded.Parameters {
-							if p.Name == "to" {
-								to = p.Value
-							} else if p.Name == "value" {
-								amount = p.Value
-							}
-						}
-						s2 := fmt.Sprintf("\n%d Transfer %s $%s to %s\n", index, s.ParseBalance(amount, int32(tokenInfo.Decimals)), tokenInfo.Symbol, to)
-						ret += s2
-						s3 := fmt.Sprintf("\nSigning Threshold: %d/%d\n", len(qt.Confirmations), qt.ConfirmationsRequired)
-						ret += s3
-						s4 := fmt.Sprintln("✍️ Sign/Submit it!")
-						ret += s4
-						var e tgbotapi.MessageEntity
-						e.Type = "text_link"
-						e.URL = link
-						e.Offset = len(utf16.Encode([]rune(s2+s3))) + startOffset
-						startOffset += len(utf16.Encode([]rune(s2 + s3)))
-						e.Length = len(utf16.Encode([]rune(s4)))
-						startOffset += e.Length
-						m.Entities = append(m.Entities, e)
-					}
-				}
 			}
 			index++
 		}
