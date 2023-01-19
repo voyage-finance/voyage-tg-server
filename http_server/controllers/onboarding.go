@@ -94,6 +94,8 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 			json.NewEncoder(rw).Encode(fmt.Sprintf("No user in system with id = %v", signMessage.UserID))
 			return
 		}
+
+		// todo check if addr belongs to Status()
 		ret := s.AddSigner(signMessage.ChatID, user.UserName, addr)
 		if ret != "" {
 			response = ret

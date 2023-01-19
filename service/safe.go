@@ -255,26 +255,16 @@ type StatusResp struct {
 	Owners    []string `jsom:"owners"`
 }
 
-func (s *Service) Status(id int64) string {
+func (s *Service) Status(id int64) []string {
 	chat := s.QueryChat(id)
-	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/", chat.SafeAddress)
-	resp, err := s.Client.R().EnableTrace().Get(r)
-	if err != nil {
-		return err.Error()
+	network := "mainnet"
+	if chat.Chain == "matic" {
+		network = "polygon"
 	}
+	r := fmt.Sprintf("https://safe-transaction-%s.safe.global/api/v1/safes/%s/", network, chat.SafeAddress)
+	resp, _ := s.Client.R().EnableTrace().Get(r)
 
 	var statusResp StatusResp
-	err = json.Unmarshal(resp.Body(), &statusResp)
-	if err != nil {
-		return err.Error()
-	}
-
-	return fmt.Sprintf(`Safe status
-			Address: %s
-			Nonce: %d
-			Threshold: %d
-			Owners: %+q
-
-	`, statusResp.Address, statusResp.Nonce, statusResp.Threshold, statusResp.Owners)
-
+	_ = json.Unmarshal(resp.Body(), &statusResp)
+	return statusResp.Owners
 }
