@@ -18,10 +18,6 @@ func (s *Service) SetupChat(id int64, title string) {
 	}
 }
 
-func (s *Service) AddPendingVerification(message string, chatId string, name string, address string) {
-
-}
-
 func (s *Service) AddSigner(id int64, name string, address string) string {
 	log.Printf("AddSigner id: %d, name: %s, address: %s\n", id, name, address)
 	var chat models.Chat
@@ -52,17 +48,15 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 	return ""
 }
 
-func (s *Service) AddSafeWallet(id int64, addr string) string {
+func (s *Service) AddSafeWallet(id int64, addr []string) string {
 	log.Printf("AddSafeWallet id: %d, address: %s\n", id, addr)
-	if addr == "" {
-		return "Wrong address"
-	}
 	var chat models.Chat
 	s.DB.First(&chat, "chat_id = ?", id)
 	if !chat.Init {
 		return "Please init first"
 	}
-	s.DB.Model(&chat).Where("chat_id = ?", id).Update("SafeAddress", addr)
+	s.DB.Model(&chat).Where("chat_id = ?", id).Update("SafeAddress", addr[1])
+	s.DB.Model(&chat).Where("chat_id = ?", id).Update("Chain", addr[0])
 	return ""
 }
 

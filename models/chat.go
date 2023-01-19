@@ -4,6 +4,7 @@ type Chat struct {
 	ChatId      string `json:"chat_id"`
 	Title       string `json:"title"`
 	Type        string `json:"type"`
+	Chain       string `json:"chain"`
 	SafeAddress string `json:"safe_address"`
 	Init        bool   `json:"init"`
 	Signers     string `json:"signers"`

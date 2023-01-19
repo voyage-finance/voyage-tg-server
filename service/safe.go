@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/dustin/go-humanize"
 	"github.com/ethereum/go-ethereum/common"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/shopspring/decimal"
 )
 
@@ -18,22 +20,34 @@ type QueueTransactionResp struct {
 }
 
 type QueueTransaction struct {
-	Safe           string
-	To             string
-	Value          string
-	Data           string
-	Operation      int64
-	GasToken       string
-	SafeTxGas      int64
-	BaseGas        int64
-	GasPrice       string
-	RefundReceiver string
-	Nonce          int64
-	ExecutionDate  *string
-	SubmissionDate *string
-	Modified       *string
-	SafeTxHash     *string
-	DataDecoded    DataDecoded
+	Safe                  string
+	To                    string
+	Value                 string
+	Data                  *string
+	Operation             int64
+	GasToken              string
+	SafeTxGas             int64
+	BaseGas               int64
+	GasPrice              string
+	RefundReceiver        string
+	Nonce                 int64
+	ExecutionDate         *string
+	SubmissionDate        *string
+	Modified              *string
+	SafeTxHash            *string
+	IsExecuted            bool
+	DataDecoded           DataDecoded
+	ConfirmationsRequired int64
+	Confirmations         []TransactionConfirmation
+	TxType                string
+}
+
+type TransactionConfirmation struct {
+	Owner           string
+	SubmissionDate  string
+	TransactionHash *string
+	Signature       string
+	SignatureType   string
 }
 
 type DataDecoded struct {
@@ -73,7 +87,11 @@ func (p *Parameter) String() string {
 func (s *Service) QueryTokenBalance(id int64) string {
 	chat := s.QueryChat(id)
 	addr := common.HexToAddress(chat.SafeAddress)
-	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/balances/?trusted=false&exclude_spam=false", addr.Hex())
+	network := "mainnet"
+	if chat.Chain == "matic" {
+		network = "polygon"
+	}
+	r := fmt.Sprintf("https://safe-transaction-%s.safe.global/api/v1/safes/%s/balances/?trusted=false&exclude_spam=false", network, addr.Hex())
 	log.Println("QueryTokenBalance request: ", r)
 	resp, err := s.Client.R().EnableTrace().Get(r)
 	if err != nil {
@@ -96,11 +114,14 @@ func (s *Service) QueryTokenBalance(id int64) string {
 	ret := "💰 Account Balance\n"
 	index := 1
 	for _, balance := range balances {
-		if balance.Token.Name == "" {
-			balance.Token.Name = "ETH"
-		}
 		if balance.Token.Symbol == "" {
-			balance.Token.Symbol = "ETH"
+			if chat.Chain == "eth" {
+				balance.Token.Symbol = "ETH"
+			}
+			if chat.Chain == "matic" {
+				balance.Token.Symbol = "MATIC"
+			}
+
 		}
 		if balance.Token.Decimals == 0 {
 			balance.Token.Decimals = 18
@@ -121,9 +142,24 @@ func (s *Service) QueryTokenBalance(id int64) string {
 
 }
 
-func (s *Service) QueueTransaction(id int64, limit int64) string {
+func (s *Service) ParseBalance(bal string, decimals int32) string {
+	formatBalance, _ := decimal.NewFromString(bal)
+	formatBalance = formatBalance.Shift(0 - decimals)
+	formatBalance = formatBalance.Truncate(4)
+	fValue, _ := formatBalance.Float64()
+	hValue := humanize.Commaf(fValue)
+	return hValue
+
+}
+
+func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit int64) string {
 	chat := s.QueryChat(id)
-	r := fmt.Sprintf("https://safe-transaction-mainnet.safe.global/api/v1/safes/%s/all-transactions/?limit=%d&executed=false&queued=true&trusted=true", chat.SafeAddress, limit)
+	network := "mainnet"
+	if chat.Chain == "matic" {
+		network = "polygon"
+	}
+	r := fmt.Sprintf("https://safe-transaction-%s.safe.global/api/v1/safes/%s/all-transactions/?limit=%d&executed=false&queued=true&trusted=true", network, common.HexToAddress(chat.SafeAddress), limit)
+	log.Printf("request: %s\n", r)
 	resp, err := s.Client.R().EnableTrace().Get(r)
 	if err != nil {
 		return err.Error()
@@ -131,26 +167,71 @@ func (s *Service) QueueTransaction(id int64, limit int64) string {
 
 	var queueTransactionResp QueueTransactionResp
 	json.Unmarshal(resp.Body(), &queueTransactionResp)
-	ret := "Pending Transactions: "
-	for index, qt := range queueTransactionResp.QT {
+	ret := ""
+	s1 := "Pending Transactions: \n"
+	ret += s1
+	startOffset := len(utf16.Encode([]rune(s1)))
+	index := 1
+	for _, qt := range queueTransactionResp.QT {
 		parameters := ""
 		for _, p := range qt.DataDecoded.Parameters {
 			parameters += p.String()
 		}
-		link := fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/transactions/multisig_%s_%s", chat.SafeAddress, chat.SafeAddress, *qt.SafeTxHash)
+		safeTxHash := ""
+		if qt.SafeTxHash != nil {
+			safeTxHash = *qt.SafeTxHash
+		}
+		link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=multisig_%s_%s", chat.Chain, common.HexToAddress(chat.SafeAddress), common.HexToAddress(chat.SafeAddress), safeTxHash)
 
-		ret += fmt.Sprintf(`
-			Index: %d
-			Safe: %s
-			To: %s
-			Value: %s
-			SubmissionDate: %s
-			Modified: %s
-			SafeTxHash: %s
-			Method: %s
-			Parameters: %s
-			Sign/Submit it: %s
-			`, index, qt.Safe, qt.To, qt.Value, *qt.SubmissionDate, *qt.Modified, *qt.SafeTxHash, qt.DataDecoded.Method, parameters, link)
+		if !qt.IsExecuted && qt.TxType == "MULTISIG_TRANSACTION" {
+			if qt.Data == nil {
+				// indicate it is a native transaction
+				s2 := fmt.Sprintf("\n%d Transfer %s $%s to %s\n", index, s.ParseBalance(qt.Value, 18), chat.Chain, qt.To)
+				ret += s2
+				s3 := fmt.Sprintf("\nSigning Threshold: %d/%d\n", len(qt.Confirmations), qt.ConfirmationsRequired)
+				ret += s3
+				s4 := fmt.Sprintln("✍️ Sign/Submit it!")
+				ret += s4
+				var e tgbotapi.MessageEntity
+				e.Type = "text_link"
+				e.URL = link
+				e.Offset = len(utf16.Encode([]rune(s2+s3))) + startOffset
+				startOffset += len(utf16.Encode([]rune(s2 + s3)))
+				e.Length = len(utf16.Encode([]rune(s4)))
+				startOffset += e.Length
+				m.Entities = append(m.Entities, e)
+			} else {
+				tokenInfo, exist := s.Tokens[strings.ToLower(qt.To)]
+				if exist {
+					if tokenInfo.TokenType == "ERC20" {
+						var to string
+						var amount string
+						for _, p := range qt.DataDecoded.Parameters {
+							if p.Name == "to" {
+								to = p.Value
+							} else if p.Name == "value" {
+								amount = p.Value
+							}
+						}
+						s2 := fmt.Sprintf("\n%d Transfer %s $%s to %s\n", index, s.ParseBalance(amount, int32(tokenInfo.Decimals)), tokenInfo.Symbol, to)
+						ret += s2
+						s3 := fmt.Sprintf("\nSigning Threshold: %d/%d\n", len(qt.Confirmations), qt.ConfirmationsRequired)
+						ret += s3
+						s4 := fmt.Sprintln("✍️ Sign/Submit it!")
+						ret += s4
+						var e tgbotapi.MessageEntity
+						e.Type = "text_link"
+						e.URL = link
+						e.Offset = len(utf16.Encode([]rune(s2+s3))) + startOffset
+						startOffset += len(utf16.Encode([]rune(s2 + s3)))
+						e.Length = len(utf16.Encode([]rune(s4)))
+						startOffset += e.Length
+						m.Entities = append(m.Entities, e)
+					}
+				}
+			}
+			index++
+		}
 	}
 
 	return ret
@@ -159,12 +240,12 @@ func (s *Service) QueueTransaction(id int64, limit int64) string {
 
 func (s *Service) GenerateQueueLink(id int64) string {
 	chat := s.QueryChat(id)
-	return fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/transactions/queue", chat.SafeAddress)
+	return fmt.Sprintf("https://app.safe.global/%s/transactions/queue", chat.SafeAddress)
 }
 
 func (s *Service) GenerateHistoryLink(id int64) string {
 	chat := s.QueryChat(id)
-	return fmt.Sprintf("Track transaction history here: https://gnosis-safe.io/app/eth:%s/transactions/history", chat.SafeAddress)
+	return fmt.Sprintf("Track transaction history here: https://app.safe.global/%s/transactions/history", chat.SafeAddress)
 }
 
 type StatusResp struct {

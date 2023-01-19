@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/models"
@@ -27,9 +30,26 @@ func main() {
 	db.AutoMigrate(&models.User{})
 	db.AutoMigrate(&models.Chat{})
 
-	client := resty.New()
+	tokens, err := os.ReadFile("tokens.json")
+	if err != nil {
+		panic("failed to read tokens")
+	}
+	var ts []service.TokenInfo
+	json.Unmarshal(tokens, &ts)
 
-	s := service.Service{DB: db, Client: client}
+	client := resty.New()
+	infuraAPI := "https://mainnet.infura.io/v3/b85b517bc9ed49bd8fe5eacb6d9a2bc7"
+	ethClient, err := ethclient.Dial(infuraAPI)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tokenInfo := make(map[string]service.TokenInfo)
+	for _, t := range ts {
+		tokenInfo[strings.ToLower(t.TokenAddress)] = t
+	}
+
+	s := service.Service{DB: db, Client: client, EthClient: ethClient, Tokens: tokenInfo}
 
 	bot, err := tgbotapi.NewBotAPI("5835886666:AAGt66BQaepE3VAGACDvGSmk2qFFUqo2fEY")
 	if err != nil {
@@ -45,6 +65,9 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
+	// n := service.Notification{Bot: bot, S: &s}
+	// go n.Start()
+
 	for update := range updates {
 		if update.Message == nil { // ignore non-Message updates
 			continue
@@ -55,6 +78,7 @@ func main() {
 		// Extract the command from the Message.
 		switch update.Message.Command() {
 		case "help":
+			log.Printf("Chat id: %d\n", update.Message.Chat.ID)
 			msg.Text = `Commands:
 					/this: show current wallet info
 					/verify: generate random message to sign
@@ -70,40 +94,31 @@ func main() {
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
 
-			// 1. Safe address should be bold
+			s1 := "🔓 Safe address\n"
+			msg.Text = s1
 			var e1 tgbotapi.MessageEntity
 			e1.Type = "bold"
-			e1.Offset = 2
-			e1.Length = 13
+			e1.Offset = 0
+			e1.Length = len(utf16.Encode([]rune(s1)))
 			msg.Entities = append(msg.Entities, e1)
 
-			// 2. Address should be hypelink
+			addr := common.HexToAddress(chat.SafeAddress)
+			s2 := fmt.Sprintf("\n%s:%s\n", chat.Chain, addr.Hex())
 			var e2 tgbotapi.MessageEntity
 			e2.Type = "code"
-			e2.Offset = 16
-			e2.Length = 53
-			addr := common.HexToAddress(chat.SafeAddress)
-			e2.URL = fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", addr.Hex())
+			e2.Offset = len(utf16.Encode([]rune(s1)))
+			e2.Length = len(utf16.Encode([]rune(s2)))
+			e2.URL = fmt.Sprintf("https://app.safe.global/%s:%s/home", chat.Chain, addr.Hex())
 			msg.Entities = append(msg.Entities, e2)
+			msg.Text += s2
 
-			// 3. Link button to gnosis safe wallet
-			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("Link", fmt.Sprintf("https://gnosis-safe.io/app/eth:%s/home", addr.Hex())),
-				),
-			)
-
-			// 4. Owners should be bold
+			s3 := "\n🔑 Owners\n"
 			var e3 tgbotapi.MessageEntity
 			e3.Type = "bold"
-			e3.Offset = 68
-			e3.Length = 7
+			e3.Offset = len(utf16.Encode([]rune(s1 + s2)))
+			e3.Length = len(utf16.Encode([]rune(s3)))
 			msg.Entities = append(msg.Entities, e3)
-
-			msg.Text = fmt.Sprintln("🔓 Safe address")
-			msg.Text += fmt.Sprintf("\neth:%s", addr.Hex())
-			msg.Text += "\n"
-			msg.Text += fmt.Sprintln("\n🔑  Owners")
+			msg.Text += s3
 
 			var ss []models.Signer
 			_ = json.Unmarshal([]byte(chat.Signers), &ss)
@@ -111,9 +126,13 @@ func main() {
 				msg.Text += fmt.Sprintf("\n%d. @%s - %s\n", i+1, s.Name, s.Address)
 			}
 
+			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("Link", e2.URL),
+				),
+			)
 			msg.ReplyMarkup = safeButton
 		case "verify":
-			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
 			message := "0x" + s.GenerateMessage(10)
 			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
@@ -125,12 +144,11 @@ func main() {
 			msg.Text = "Please verify your account address via Sign-In With Ethereum."
 		case "queue":
 			args := update.Message.CommandArguments()
-			limit, err := strconv.ParseInt(args, 10, 64)
-			if err != nil {
-				msg.Text = "Wrong argument"
-			} else {
-				msg.Text = s.QueueTransaction(update.Message.Chat.ID, limit)
+			limit, _ := strconv.ParseInt(args, 10, 64)
+			if limit == 0 {
+				limit = 3
 			}
+			msg.Text = s.QueueTransaction(&msg, update.Message.Chat.ID, limit)
 		case "balance":
 			chatId := update.Message.Chat.ID
 			msg.Text = s.QueryTokenBalance(chatId)
@@ -164,11 +182,17 @@ func main() {
 
 		case "setup":
 			args := update.Message.CommandArguments()
-			ret := s.AddSafeWallet(update.Message.Chat.ID, args)
-			if ret != "" {
-				msg.Text = ret
+			chainAndAddr := strings.Split(args, ":")
+			if len(chainAndAddr) != 2 {
+				msg.Text = "Wrong format"
 			} else {
-				msg.Text = fmt.Sprintf("Added safe wallet, address: %s", args)
+				s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
+				ret := s.AddSafeWallet(update.Message.Chat.ID, chainAndAddr)
+				if ret != "" {
+					msg.Text = ret
+				} else {
+					msg.Text = fmt.Sprintf("Added safe wallet, address: %s", args)
+				}
 			}
 
 		case "safestatus":
@@ -177,6 +201,28 @@ func main() {
 			msg.Text = s.GenerateQueueLink(update.Message.Chat.ID)
 		case "safehistory":
 			msg.Text = s.GenerateHistoryLink(update.Message.Chat.ID)
+		case "ai":
+			args := update.Message.CommandArguments()
+			var request models.AIRequest
+			request.Model = "text-davinci-003"
+			request.Prompt = args
+			request.Temperature = 0
+			request.MaxTokens = 1000
+
+			rs, _ := json.Marshal(request)
+			resp, err := s.Client.R().
+				SetHeader("Authorization", fmt.Sprintf("Bearer %s", "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")).
+				SetHeader("Content-Type", "application/json").
+				SetBody(string(rs)).
+				Post("https://api.openai.com/v1/completions")
+			if err != nil {
+				msg.Text = err.Error()
+			} else {
+				var rsp models.AIResponse
+				json.Unmarshal(resp.Body(), &rsp)
+				msg.Text = rsp.Choices[0].Text
+			}
+
 		default:
 			msg.Text = "I don't know that command"
 		}

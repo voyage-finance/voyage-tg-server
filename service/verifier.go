@@ -8,15 +8,26 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-resty/resty/v2"
 	"gorm.io/gorm"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+type TokenInfo struct {
+	TokenAddress string
+	TokenType    string
+	Name         string
+	Symbol       string
+	Decimals     int64
+}
+
 type Service struct {
-	DB     *gorm.DB
-	Client *resty.Client
+	DB        *gorm.DB
+	Client    *resty.Client
+	EthClient *ethclient.Client
+	Tokens    map[string]TokenInfo
 }
 
 func (s *Service) GenerateMessage(n int) string {
