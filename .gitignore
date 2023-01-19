@@ -1,2 +1,5 @@
 /bin
 test.db
+config/.env.dev.local
+config/.env.production.local
+/.idea/*

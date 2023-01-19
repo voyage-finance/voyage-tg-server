@@ -2,19 +2,22 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
-
+	"errors"
 	"github.com/voyage-finance/voyage-tg-server/models"
+	"gorm.io/gorm"
+	"log"
+	"strconv"
 )
 
-func (s *Service) SetupChat(id int64, title string) {
-	log.Printf("SetupChat id: %d, title: %s\n", id, title)
+func (s *Service) SetupChat(id int64, title string, userId int64, userName string) {
+	log.Printf("SetupChat id: %d, title: %s, user: %v\n", id, title, userName)
+	// create user if not exist
+	_ = s.GetOrCreateUser(userId, userName)
 	var chat models.Chat
 	s.DB.First(&chat, "chat_id = ?", id)
 	if !chat.Init {
 		log.Println("start creating chat...")
-		s.DB.Create(&models.Chat{ChatId: fmt.Sprintf("%d", id), Title: title, Init: true})
+		s.DB.Create(&models.Chat{ChatId: id, Title: title, Init: true})
 	}
 }
 
@@ -44,7 +47,7 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 	if err != nil {
 		return "Marshal signers faled"
 	}
-	s.DB.Model(&chat).Where("chat_id = ?", id).Update("Signers", signerStr)
+	s.DB.Model(&chat).Where("chat_id = ?", strconv.FormatInt(id, 10)).Update("Signers", signerStr)
 	return ""
 }
 
@@ -62,6 +65,30 @@ func (s *Service) AddSafeWallet(id int64, addr []string) string {
 
 func (s *Service) QueryChat(id int64) *models.Chat {
 	var chat models.Chat
-	s.DB.First(&chat, "chat_id = ?", fmt.Sprintf("%d", id))
+	s.DB.First(&chat, "chat_id = ?", id)
 	return &chat
+}
+
+// Get or Create functions
+
+func (s *Service) GetOrCreateUser(userId int64, userName string) models.User {
+	// get or create user
+	var user models.User
+	err := s.DB.First(&user, "user_id = ?", userId).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		user = models.User{UserId: userId, UserName: userName}
+		s.DB.Create(&user)
+	}
+	return user
+}
+
+func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64) models.SignMessage {
+	var signMessage models.SignMessage
+	err := s.DB.First(&signMessage, "chat_id = ? AND user_id = ?", chatId, userId).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		message := "0x" + s.GenerateMessage(10)
+		signMessage = models.SignMessage{UserID: userId, ChatID: chatId, Message: message}
+		s.DB.Create(&signMessage)
+	}
+	return signMessage
 }

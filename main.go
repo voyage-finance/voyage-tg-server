@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-resty/resty/v2"
+	"github.com/voyage-finance/voyage-tg-server/http_server"
 	"log"
 	"os"
 	"strconv"
@@ -12,23 +14,38 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/voyage-finance/voyage-tg-server/config"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func main() {
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	config.Init()
+	dsn := fmt.Sprintf("host=%v "+
+		"user=%v "+
+		"password=%v "+
+		"dbname=%v "+
+		"port=%v "+
+		"sslmode=disable "+
+		"TimeZone=Asia/Almaty",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("DB_PORT"),
+	)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
 	}
 
 	// Migrate the schema
-	db.AutoMigrate(&models.User{})
-	db.AutoMigrate(&models.Chat{})
+	//db.AutoMigrate(&models.User{})
+	//db.AutoMigrate(&models.Chat{})
+	//db.AutoMigrate(&models.SignMessage{})
 
 	tokens, err := os.ReadFile("tokens.json")
 	if err != nil {
@@ -51,7 +68,9 @@ func main() {
 
 	s := service.Service{DB: db, Client: client, EthClient: ethClient, Tokens: tokenInfo}
 
-	bot, err := tgbotapi.NewBotAPI("5835886666:AAGt66BQaepE3VAGACDvGSmk2qFFUqo2fEY")
+	go http_server.HandleRequests(s)
+
+	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_KEY"))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -83,7 +102,7 @@ func main() {
 					/this: show current wallet info
 					/verify: generate random message to sign
 					/submitowner: submit message and signature info to complete verify process
-					/setup: submit gnosis safe wallet address
+					/setup: submit gnosis safe wallet address, e.g: 0x......
 					/queue: check transactions in pending pool
 					/balance: check token balances
 					/safestatus: check wallet status
@@ -93,9 +112,10 @@ func main() {
 		case "this":
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
-
 			s1 := "🔓 Safe address\n"
 			msg.Text = s1
+			fmt.Println(chat)
+			// 1. Safe address should be bold
 			var e1 tgbotapi.MessageEntity
 			e1.Type = "bold"
 			e1.Offset = 0
@@ -133,8 +153,10 @@ func main() {
 			)
 			msg.ReplyMarkup = safeButton
 		case "verify":
-			message := "0x" + s.GenerateMessage(10)
-			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s", message, update.Message.From.String())
+			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
+			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
+			message := signMessage.Message
+			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s&msg_id=%v", message, update.Message.From.String(), signMessage.ID)
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
 					tgbotapi.NewInlineKeyboardButtonURL("Link", r),
@@ -186,7 +208,7 @@ func main() {
 			if len(chainAndAddr) != 2 {
 				msg.Text = "Wrong format"
 			} else {
-				s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title)
+				s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 				ret := s.AddSafeWallet(update.Message.Chat.ID, chainAndAddr)
 				if ret != "" {
 					msg.Text = ret
@@ -211,7 +233,7 @@ func main() {
 
 			rs, _ := json.Marshal(request)
 			resp, err := s.Client.R().
-				SetHeader("Authorization", fmt.Sprintf("Bearer %s", "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")).
+				SetHeader("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_TOKEN"))).
 				SetHeader("Content-Type", "application/json").
 				SetBody(string(rs)).
 				Post("https://api.openai.com/v1/completions")

@@ -1,0 +1,45 @@
+version: "3"
+
+services:
+  web:
+    image: "nginx:latest"
+    restart: "always"
+    expose:
+      - "80"
+    environment:
+      - "DOMAIN_NAME=${DOMAIN_NAME}"
+      - "PROXY_PASS=http://app:${HTTP_SERVER_PORT}"
+    volumes:
+      - "../infra/nginx/conf.d:/etc/nginx/conf.d/templates"
+    networks:
+      - "bot_network"
+    labels:
+      - traefik.http.routers.${TRAEFIK_BACKEND}.rule=Host(`${DOMAIN_NAME}`)
+      - traefik.http.routers.${TRAEFIK_BACKEND}.tls=true
+      - traefik.http.routers.${TRAEFIK_BACKEND}.tls.certresolver=lets-encrypt
+      - traefik.port=80
+    depends_on:
+      - app
+    command: /bin/bash -c "envsubst '$${DOMAIN_NAME} $${PROXY_PASS}' < /etc/nginx/conf.d/templates/conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+
+
+  app:
+    image: ${BOT_IMAGE}
+    restart: "always"
+    ports:
+      - "${HTTP_SERVER_PORT}:${HTTP_SERVER_PORT}"
+    volumes:
+      - ".:/src/github.com/voyage-finance/voyage-tg-server"
+    networks:
+      - "bot_network"
+      - "db_network"
+    env_file:
+      - "config/.env.${BOT_ENV}"
+    command: "go run main.go"
+
+networks:
+  bot_network:
+    external:
+      name: "${NETWORK_NAME}"
+  db_network:
+    external: True

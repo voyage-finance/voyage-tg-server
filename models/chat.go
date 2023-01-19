@@ -1,13 +1,14 @@
 package models
 
 type Chat struct {
-	ChatId      string `json:"chat_id"`
-	Title       string `json:"title"`
-	Type        string `json:"type"`
-	Chain       string `json:"chain"`
-	SafeAddress string `json:"safe_address"`
-	Init        bool   `json:"init"`
-	Signers     string `json:"signers"`
+	ChatId       int64  `gorm:"primaryKey;unique:true;not_null:true"`
+	Title        string `json:"title"`
+	Type         string `json:"type"`
+	Chain        string `json:"chain"`
+	SafeAddress  string `json:"safe_address"`
+	Init         bool   `json:"init"`
+	Signers      string `json:"signers"`
+	SignMessages []SignMessage
 }
 
 type Signer struct {
