@@ -135,10 +135,22 @@ func main() {
 			msg.Entities = append(msg.Entities, e3)
 			msg.Text += s3
 
+			startOffset := len(utf16.Encode([]rune(msg.Text)))
+
 			var ss []models.Signer
 			_ = json.Unmarshal([]byte(chat.Signers), &ss)
 			for i, s := range ss {
-				msg.Text += fmt.Sprintf("\n%d. @%s - %s\n", i+1, s.Name, s.Address)
+				n := fmt.Sprintf("\n%d. @%s - ", i+1, s.Name)
+				msg.Text += n
+				a := fmt.Sprintf("%s\n", s.Address)
+				var e tgbotapi.MessageEntity
+				e.Type = "code"
+				e.Offset = startOffset + len(utf16.Encode([]rune(n)))
+				e.Length = len(utf16.Encode([]rune(a)))
+				msg.Entities = append(msg.Entities, e)
+				msg.Text += a
+				startOffset += len(utf16.Encode([]rune(n)))
+				startOffset += len(utf16.Encode([]rune(a)))
 			}
 
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
