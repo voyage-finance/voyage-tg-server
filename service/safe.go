@@ -197,8 +197,19 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 							amount = p.Value
 						}
 					}
-					s2 := fmt.Sprintf("\n%d Transfer %s $%s to %s\n", index, s.ParseBalance(amount, int32(tokenInfo.Decimals)), tokenInfo.Symbol, to)
+
+					s2 := fmt.Sprintf("\n%d Transfer %s $%s to ", index, s.ParseBalance(amount, int32(tokenInfo.Decimals)), tokenInfo.Symbol)
 					ret += s2
+					a2 := fmt.Sprintf("%s\n", to)
+					ret += a2
+					var as tgbotapi.MessageEntity
+					as.Type = "code"
+					as.Offset = len(utf16.Encode([]rune(s2))) + startOffset
+					as.Length = len(utf16.Encode([]rune(a2)))
+					m.Entities = append(m.Entities, as)
+
+					startOffset += len(utf16.Encode([]rune(a2 + s2)))
+
 					s3 := fmt.Sprintf("\nSigning Threshold: %d/%d\n", len(qt.Confirmations), qt.ConfirmationsRequired)
 					ret += s3
 					s4 := fmt.Sprintln("✍️ Sign/Submit it!")
@@ -206,17 +217,28 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 					var e tgbotapi.MessageEntity
 					e.Type = "text_link"
 					e.URL = link
-					e.Offset = len(utf16.Encode([]rune(s2+s3))) + startOffset
-					startOffset += len(utf16.Encode([]rune(s2 + s3)))
+					e.Offset = len(utf16.Encode([]rune(s3))) + startOffset
 					e.Length = len(utf16.Encode([]rune(s4)))
-					startOffset += e.Length
 					m.Entities = append(m.Entities, e)
+
+					startOffset += len(utf16.Encode([]rune(s3 + s4)))
+
 				}
 			} else {
 				// todo could be native transfer or alt coin transfer
 				// indicate it is a native transaction
-				s2 := fmt.Sprintf("\n%d Transfer %s $%s to %s\n", index, s.ParseBalance(qt.Value, 18), chat.Chain, qt.To)
+				s2 := fmt.Sprintf("\n%d Transfer %s $%s to ", index, s.ParseBalance(qt.Value, 18), chat.Chain)
 				ret += s2
+				a2 := fmt.Sprintf("%s\n", qt.To)
+				ret += a2
+				var as tgbotapi.MessageEntity
+				as.Type = "code"
+				as.Offset = len(utf16.Encode([]rune(s2))) + startOffset
+				as.Length = len(utf16.Encode([]rune(a2)))
+				m.Entities = append(m.Entities, as)
+
+				startOffset += len(utf16.Encode([]rune(a2 + s2)))
+
 				s3 := fmt.Sprintf("\nSigning Threshold: %d/%d\n", len(qt.Confirmations), qt.ConfirmationsRequired)
 				ret += s3
 				s4 := fmt.Sprintln("✍️ Sign/Submit it!")
@@ -224,11 +246,11 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 				var e tgbotapi.MessageEntity
 				e.Type = "text_link"
 				e.URL = link
-				e.Offset = len(utf16.Encode([]rune(s2+s3))) + startOffset
-				startOffset += len(utf16.Encode([]rune(s2 + s3)))
+				e.Offset = len(utf16.Encode([]rune(s3))) + startOffset
 				e.Length = len(utf16.Encode([]rune(s4)))
-				startOffset += e.Length
 				m.Entities = append(m.Entities, e)
+
+				startOffset += len(utf16.Encode([]rune(s3 + s4)))
 			}
 			index++
 		}
