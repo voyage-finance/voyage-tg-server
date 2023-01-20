@@ -6,22 +6,91 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/spruceid/siwe-go"
 	"github.com/thedevsaddam/govalidator"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
 	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 	"net/http"
+	"net/url"
 	"strings"
+	"time"
+)
+
+const domain = "example.com"
+const addressStr = "0x71C7656EC7ab88b098defB751B7401B5f6d8976F"
+
+var address = common.HexToAddress(addressStr)
+
+const uri = "https://example.com"
+const version = "1"
+const statement = "Example statement for SIWE"
+
+var issuedAt = time.Now().UTC().Format(time.RFC3339)
+var nonce = siwe.GenerateNonce()
+
+const chainId = 1
+
+var expirationTime = time.Now().UTC().Add(48 * time.Hour).Format(time.RFC3339)
+
+var notBefore = time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
+
+const requestId = "some-id"
+
+var resourcesStr = []string{"https://example.com/resources/1", "https://example.com/resources/2"}
+
+func parsedResources() []url.URL {
+	parsed := make([]url.URL, len(resourcesStr))
+	for i, resource := range resourcesStr {
+		url, _ := url.Parse(resource)
+		parsed[i] = *url
+	}
+	return parsed
+}
+
+var resources = parsedResources()
+
+var options = map[string]interface{}{
+	"statement":      statement,
+	"version":        version,
+	"chainId":        chainId,
+	"issuedAt":       issuedAt,
+	"expirationTime": expirationTime,
+	"notBefore":      notBefore,
+	"requestId":      requestId,
+	"resources":      resources,
+}
+
+var message, _ = siwe.InitMessage(
+	domain,
+	addressStr,
+	uri,
+	nonce,
+	options,
 )
 
 func Test(s service.Service) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		var chats []models.Chat
-		s.DB.Find(&chats)
-		fmt.Println(chats, "------")
-		json.NewEncoder(rw).Encode(chats)
+
+		//return
+		msg := message.String()
+		signature := "0x86161adb85bf33d3ee398cb93fd3336a327c86bda9f6e114326ff84ae98a25b32e2731ebab1512c232544088e27a83eadc8557d943a18ff82793434018d34dd61b"
+		message, err := siwe.ParseMessage(msg)
+		fmt.Println(message.GetAddress(), message.GetStatement())
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println("message: ", message)
+		publicKey, err := message.VerifyEIP191(signature)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Println("publicKey: ", publicKey)
+		json.NewEncoder(rw).Encode(true)
 	}
 }
 
@@ -55,12 +124,30 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 			return
 		}
 
-		// 2.0 check sign message in db
+		// 2.0 validate message
+		message, err := siwe.ParseMessage(signedMsgSerializer.Message)
+		response := ""
+		if err != nil {
+			response = fmt.Sprintf("message error: %v \n", err)
+			ReturnHttpBadResponse(rw, response)
+			return
+		}
+		publicKey, err := message.VerifyEIP191(signedMsgSerializer.Signature)
+		if err != nil {
+			response = fmt.Sprintf("signature error: %v \n", err)
+			ReturnHttpBadResponse(rw, response)
+			return
+		}
+
+		fmt.Println("publicKey: ", publicKey)
+		fmt.Println("GetAddress: ", message.GetAddress())
+		fmt.Println("GetStatement: ", message.GetStatement())
+
+		// 3.0 check sign message in db
 		var signMessage models.SignMessage
-		err := s.DB.First(&signMessage, "id = ?", signedMsgSerializer.Id.Value).Error
+		err = s.DB.First(&signMessage, "id = ? AND message = ?", signedMsgSerializer.Id.Value, message.GetStatement()).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			rw.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(rw).Encode("Message not found!")
+			ReturnHttpBadResponse(rw, "Message not found!")
 			return
 		}
 
@@ -69,50 +156,28 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 			return
 		}
 
-		// 3.0 check message by decoding
-		message, err1 := hexutil.Decode(signedMsgSerializer.Message)
-		response := ""
-		if err1 != nil {
-			response += " Wrong message"
-		}
-		// 3.1 check signature by decoding
-		signature, err1 := hexutil.Decode(signedMsgSerializer.Signature)
-		if err1 != nil {
-			response += " Wrong signature"
-		}
-
-		if response != "" {
-			rw.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(rw).Encode(response)
-			return
-		}
-
-		addr := s.RecoveryAddress(message, signature)
 		// 4.0 check user existence in db
 		var user models.User
 		err = s.DB.First(&user, signMessage.UserID).Error
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(rw).Encode(fmt.Sprintf("No user in system with id = %v", signMessage.UserID))
+			ReturnHttpBadResponse(rw, fmt.Sprintf("No user in system with id = %v", signMessage.UserID))
 			return
 		}
 
 		// 5.0 check whether signing address exists in Safe UI
-		owners := s.Status(signMessage.ChatID) // lowered in slice
-		addr = strings.ToLower(addr)           // lowered addr
+		owners := s.Status(signMessage.ChatID)                 // lowered in slice
+		addr := strings.ToLower(message.GetAddress().String()) // lowered addr
 		if !slices.Contains(owners, addr) {
-			rw.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(rw).Encode(fmt.Sprintf("This is not owner %v", addr))
+			ReturnHttpBadResponse(rw, fmt.Sprintf("This is not owner %v", addr))
 			return
 		}
 
-		ret := s.AddSigner(signMessage.ChatID, user.UserName, addr)
-		if ret != "" {
-			response = ret
-		} else {
+		response = s.AddSigner(signMessage.ChatID, user.UserName, addr)
+		if response == "" {
 			response = fmt.Sprintf("Added signer, address: %s", addr)
 		}
 
+		// 6.0 update signMessage
 		signMessage.IsVerified = true
 		s.DB.Save(&signMessage)
 
