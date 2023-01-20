@@ -205,9 +205,10 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 					var as tgbotapi.MessageEntity
 					as.Type = "code"
 					as.Offset = len(utf16.Encode([]rune(s2))) + startOffset
-					startOffset += len(utf16.Encode([]rune(s2)))
 					as.Length = len(utf16.Encode([]rune(a2)))
 					m.Entities = append(m.Entities, as)
+
+					startOffset += len(utf16.Encode([]rune(a2 + s2)))
 
 					s3 := fmt.Sprintf("\nSigning Threshold: %d/%d\n", len(qt.Confirmations), qt.ConfirmationsRequired)
 					ret += s3
@@ -217,10 +218,11 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 					e.Type = "text_link"
 					e.URL = link
 					e.Offset = len(utf16.Encode([]rune(s3))) + startOffset
-					startOffset += len(utf16.Encode([]rune(s3)))
 					e.Length = len(utf16.Encode([]rune(s4)))
-					startOffset += e.Length
 					m.Entities = append(m.Entities, e)
+
+					startOffset += len(utf16.Encode([]rune(s3 + s4)))
+
 				}
 			} else {
 				// todo could be native transfer or alt coin transfer
