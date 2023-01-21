@@ -92,13 +92,11 @@ func (s *Service) QueryTokenBalance(id int64) string {
 		network = "polygon"
 	}
 	r := fmt.Sprintf("https://safe-transaction-%s.safe.global/api/v1/safes/%s/balances/?trusted=false&exclude_spam=false", network, addr.Hex())
-	log.Println("QueryTokenBalance request: ", r)
 	resp, err := s.Client.R().EnableTrace().Get(r)
 	if err != nil {
 		return err.Error()
 	}
 	var balances []TokenBalance
-	log.Println("QueryTokenBalance balances: ", balances)
 	json.Unmarshal(resp.Body(), &balances)
 	supportedCurrencies, err := s.Client.R().EnableTrace().Get("https://api.coingecko.com/api/v3/coins/list")
 	if err != nil {
@@ -134,7 +132,7 @@ func (s *Service) QueryTokenBalance(id int64) string {
 			hValue := humanize.Commaf(fValue)
 			ret += fmt.Sprintf(`
 			%d. $%s - %s
-			`, index, balance.Token.Symbol, hValue)
+			`, index, strings.ToUpper(balance.Token.Symbol), hValue)
 			index++
 		}
 	}
@@ -198,7 +196,7 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 						}
 					}
 
-					s2 := fmt.Sprintf("\n%d Transfer %s $%s to ", index, s.ParseBalance(amount, int32(tokenInfo.Decimals)), tokenInfo.Symbol)
+					s2 := fmt.Sprintf("\n%d Transfer %s $%s to ", index, s.ParseBalance(amount, int32(tokenInfo.Decimals)), strings.ToUpper(tokenInfo.Symbol))
 					ret += s2
 					a2 := fmt.Sprintf("%s\n", to)
 					ret += a2
@@ -227,7 +225,7 @@ func (s *Service) QueueTransaction(m *tgbotapi.MessageConfig, id int64, limit in
 			} else {
 				// todo could be native transfer or alt coin transfer
 				// indicate it is a native transaction
-				s2 := fmt.Sprintf("\n%d Transfer %s $%s to ", index, s.ParseBalance(qt.Value, 18), chat.Chain)
+				s2 := fmt.Sprintf("\n%d Transfer %s $%s to ", index, s.ParseBalance(qt.Value, 18), strings.ToUpper(chat.Chain))
 				ret += s2
 				a2 := fmt.Sprintf("%s\n", qt.To)
 				ret += a2
