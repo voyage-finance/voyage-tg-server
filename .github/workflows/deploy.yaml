@@ -20,6 +20,6 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           script: |
-            cd voyage/bundler
+            cd voyage/bot_server
             git pull
             make run_bundler_staging_daemon
