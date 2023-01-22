@@ -16,7 +16,7 @@ jobs:
       - name: Login to remote server via SSH
         uses: appleboy/ssh-action@master
         with:
-          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           script: |
