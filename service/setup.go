@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 	"log"
 	"strconv"
+	"strings"
 )
 
 func (s *Service) SetupChat(id int64, title string, userId int64, userName string) {
@@ -28,6 +29,7 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 	if !chat.Init {
 		return "Please init first"
 	}
+	address = strings.ToLower(address)
 	var signers []models.Signer
 	if chat.Signers != "" {
 		err := json.Unmarshal([]byte(chat.Signers), &signers)

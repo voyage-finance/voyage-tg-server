@@ -90,7 +90,7 @@ func Test(s service.Service) http.HandlerFunc {
 			return
 		}
 		fmt.Println("publicKey: ", publicKey)
-		json.NewEncoder(rw).Encode(true)
+		json.NewEncoder(rw).Encode("Git actions is working")
 	}
 }
 
