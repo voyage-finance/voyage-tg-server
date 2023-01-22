@@ -74,22 +74,6 @@ var message, _ = siwe.InitMessage(
 func Test(s service.Service) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 
-		//return
-		msg := message.String()
-		signature := "0x86161adb85bf33d3ee398cb93fd3336a327c86bda9f6e114326ff84ae98a25b32e2731ebab1512c232544088e27a83eadc8557d943a18ff82793434018d34dd61b"
-		message, err := siwe.ParseMessage(msg)
-		fmt.Println(message.GetAddress(), message.GetStatement())
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Println("message: ", message)
-		publicKey, err := message.VerifyEIP191(signature)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Println("publicKey: ", publicKey)
 		json.NewEncoder(rw).Encode("Git actions is working")
 	}
 }
