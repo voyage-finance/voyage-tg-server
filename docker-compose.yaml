@@ -24,7 +24,7 @@ services:
 
 
   app:
-    image: ${BOT_IMAGE}
+    build: .
     restart: "always"
     ports:
       - "${HTTP_SERVER_PORT}:${HTTP_SERVER_PORT}"
