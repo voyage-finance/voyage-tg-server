@@ -103,6 +103,7 @@ func main() {
 					/setup: submit gnosis safe wallet address, e.g: 0x......
 					/queue: check transactions in pending pool
 					/balance: check token balances
+					/remove_signer: removes signer of user
 			`
 		case "this":
 			chatId := update.Message.Chat.ID
@@ -244,6 +245,13 @@ func main() {
 				json.Unmarshal(resp.Body(), &rsp)
 				msg.Text = rsp.Choices[0].Text
 			}
+		case "remove_signer":
+			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
+			if !signMessage.IsVerified {
+				msg.Text = fmt.Sprintf("You have not verified the message. Please send /verify@%v", bot.Self.UserName)
+				break
+			}
+			msg.Text = s.RemoveSigner(signMessage, update.Message.From.UserName)
 
 		default:
 			msg.Text = "I don't know that command"
