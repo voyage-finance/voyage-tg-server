@@ -171,6 +171,7 @@ func main() {
 			)
 			msg.ReplyMarkup = safeButton
 			msg.Text = "Please verify your account address via Sign-In With Ethereum."
+			msg.ChatID = update.Message.From.ID
 		case "queue":
 			args := update.Message.CommandArguments()
 			limit, _ := strconv.ParseInt(args, 10, 64)
@@ -200,6 +201,7 @@ func main() {
 				} else {
 					msg.Text = fmt.Sprintf("Added safe wallet, address: %s", args)
 				}
+				msg.ChatID = update.Message.From.ID
 			}
 		case "ai":
 			args := update.Message.CommandArguments()
