@@ -162,6 +162,7 @@ func main() {
 		case "verify":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
+			// Message of Direct Message
 			message := signMessage.Message
 			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s&msg_id=%v", message, update.Message.From.String(), signMessage.ID)
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
@@ -169,9 +170,28 @@ func main() {
 					tgbotapi.NewInlineKeyboardButtonURL("Link", r),
 				),
 			)
-			msg.ReplyMarkup = safeButton
-			msg.Text = "Please verify your account address via Sign-In With Ethereum."
-			msg.ChatID = update.Message.From.ID
+			dmText := "Please verify, your account address via Sign-In With Ethereum"
+			if signMessage.IsVerified {
+				dmText = "You have already verified the account address via Sign-In With Ethereum"
+			}
+			dmText += fmt.Sprintf(". Chat: `%v`", update.Message.Chat.Title)
+			dmMsg := tgbotapi.NewMessage(update.Message.From.ID, dmText)
+			dmMsg.ReplyMarkup = safeButton
+			if _, err := bot.Send(dmMsg); err != nil {
+				fmt.Println(err)
+			}
+
+			// Message to reply in chat. Adding conversation start button, in case if user does not have conversation with bot
+			msg.Text = fmt.Sprintf("Please verify, @%v, your account address via Sign-In With Ethereum. "+
+				"The message was sent to Direct Message. If you do not see any message, then click the button below", update.Message.From.UserName)
+			msg.ReplyToMessageID = update.Message.MessageID
+			startButtonLink := fmt.Sprintf("https://t.me/%v", bot.Self.UserName)
+			startButton := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("Start conversation", startButtonLink),
+				),
+			)
+			msg.ReplyMarkup = startButton
 		case "queue":
 			args := update.Message.CommandArguments()
 			limit, _ := strconv.ParseInt(args, 10, 64)
