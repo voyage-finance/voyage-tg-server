@@ -95,6 +95,14 @@ func main() {
 
 		// Extract the command from the Message.
 		switch update.Message.Command() {
+		case "start":
+			msg.Text = `Welcome to Voyage Safe bot! To get more information please send /help`
+			var unsignedMessages []models.SignMessage
+			db.Where("user_id = ? AND is_verified = false", update.Message.From.ID).Find(&unsignedMessages)
+			for _, unsignedMessage := range unsignedMessages {
+				fmt.Sprintf("Chat %v", unsignedMessage.ChatID)
+				s.SendVerifyButton(bot, update, unsignedMessage)
+			}
 		case "help":
 			log.Printf("Chat id: %d\n", update.Message.Chat.ID)
 			msg.Text = `Commands:
@@ -164,23 +172,7 @@ func main() {
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
 			// Message of Direct Message
-			message := signMessage.Message
-			r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s&msg_id=%v", message, update.Message.From.String(), signMessage.ID)
-			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("Link", r),
-				),
-			)
-			dmText := "Please verify, your account address via Sign-In With Ethereum"
-			if signMessage.IsVerified {
-				dmText = "You have already verified the account address via Sign-In With Ethereum"
-			}
-			dmText += fmt.Sprintf(". Chat: `%v`", update.Message.Chat.Title)
-			dmMsg := tgbotapi.NewMessage(update.Message.From.ID, dmText)
-			dmMsg.ReplyMarkup = safeButton
-			if _, err := bot.Send(dmMsg); err != nil {
-				fmt.Println(err)
-			}
+			s.SendVerifyButton(bot, update, signMessage)
 
 			// Message to reply in chat. Adding conversation start button, in case if user does not have conversation with bot
 			msg.Text = fmt.Sprintf("Please verify, @%v, your account address via Sign-In With Ethereum. "+
