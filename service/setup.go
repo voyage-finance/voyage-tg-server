@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"gorm.io/gorm"
 	"log"
@@ -93,4 +94,50 @@ func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64) models.Sign
 		s.DB.Create(&signMessage)
 	}
 	return signMessage
+}
+
+func (s *Service) RemoveSigner(signMessage models.SignMessage, username string) string {
+	chatId := signMessage.ChatID
+	log.Printf("RemoveSigner - chatId: %d, username: %s\n", chatId, username)
+	// 1.0 Getting the chat
+	var chat models.Chat
+	s.DB.First(&chat, "chat_id = ?", chatId)
+	if !chat.Init {
+		return "Please init first"
+	}
+	// 1.1 taking Signer objects
+	var signers []models.Signer
+	if chat.Signers != "" {
+		err := json.Unmarshal([]byte(chat.Signers), &signers)
+		if err != nil {
+			log.Printf("RemoveSigner failed, error: %s\n", err.Error())
+			return "Get current signer failed"
+		}
+	}
+
+	// 2.0 finding removing address from signers slice
+	signerIndex := -1
+	address := ""
+	for i, s := range signers {
+		if s.Name == username {
+			signerIndex = i
+			address = s.Address
+			break
+		}
+	}
+
+	if signerIndex == -1 {
+		return fmt.Sprintf("Signer(%v) address does not exist in db", username)
+	}
+
+	// 2.1 remove addresss
+	signers = append(signers[:signerIndex], signers[signerIndex+1:]...)
+	signerStr, err := json.Marshal(signers)
+	if err != nil {
+		return "Marshal signers faled"
+	}
+	// 2.2. save updated signer in database
+	s.DB.Model(&chat).Where("chat_id = ?", chatId).Update("Signers", signerStr)
+	s.DB.Delete(&signMessage)
+	return fmt.Sprintf("Address( %v ) was removed!", address)
 }

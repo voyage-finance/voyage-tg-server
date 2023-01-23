@@ -3,6 +3,8 @@ package service
 import (
 	"crypto/sha256"
 	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/voyage-finance/voyage-tg-server/models"
 	"math/rand"
 	"time"
 
@@ -53,4 +55,29 @@ func (s *Service) RecoveryAddress(message []byte, signature []byte) string {
 
 	recoveredAddr := crypto.PubkeyToAddress(*recovered)
 	return recoveredAddr.Hex()
+}
+
+func (s *Service) SendVerifyButton(bot *tgbotapi.BotAPI, update tgbotapi.Update, signMessage models.SignMessage) {
+	r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s&msg_id=%v", signMessage.Message, update.Message.From.String(), signMessage.ID)
+	var safeButton = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("Link", r),
+		),
+	)
+	dmText := "Please verify, your account address via Sign-In With Ethereum"
+	if signMessage.IsVerified {
+		dmText = "You have already verified the account address via Sign-In With Ethereum"
+	}
+	var chat models.Chat
+	s.DB.First(&chat, "chat_id = ?", signMessage.ChatID)
+	if !chat.Init {
+		fmt.Println("SendVerifyButton error: chat does not exist")
+		return
+	}
+	dmText += fmt.Sprintf(". Chat: `%v`", chat.Title)
+	dmMsg := tgbotapi.NewMessage(update.Message.From.ID, dmText)
+	dmMsg.ReplyMarkup = safeButton
+	if _, err := bot.Send(dmMsg); err != nil {
+		fmt.Println(err)
+	}
 }
