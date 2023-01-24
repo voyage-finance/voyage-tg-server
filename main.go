@@ -244,7 +244,9 @@ func main() {
 				break
 			}
 			msg.Text = s.RemoveSigner(signMessage, update.Message.From.UserName)
-
+		case "queue_v2":
+			msg.Text = s.QueueTransactionV2(&msg, update.Message.Chat.ID)
+			msg.ParseMode = "Markdown"
 		default:
 			msg.Text = "I don't know that command"
 		}
