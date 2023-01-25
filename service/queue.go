@@ -44,8 +44,9 @@ type AddressValue struct {
 }
 
 type TransferInfo struct {
-	Type  string
-	Value string
+	Type        string
+	Value       string
+	TokenSymbol string `json:"tokenSymbol"`
 }
 
 type ExecutionInfo struct {
@@ -98,6 +99,13 @@ func (s *Service) GetOwnerUsernames(chat *models.Chat) map[string]string {
 	return result
 }
 
+func GetRejectMessage(counter int, result ResultType, conflictCount int, chat *models.Chat) string {
+	line1 := fmt.Sprintf("%v) Rejection (nonce=`%v`), (conflicts=`%v`)\n\n", counter, result.Transaction.ExecutionInfo.Nonce, conflictCount+1)
+	link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", chat.Chain, common.HexToAddress(chat.SafeAddress), result.Transaction.Id)
+	line2 := fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n-----------------------------------------------\n", link)
+	return line1 + line2
+}
+
 func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string {
 	chat := s.QueryChat(id)
 	network := 1
@@ -113,28 +121,31 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 	var queueTransactionResponse QueueTransactionResponse
 	json.Unmarshal(resp.Body(), &queueTransactionResponse)
 
-	returnResponse := "*Pending Transactions:*\n"
+	returnResponse := ""
 	//startOffset := len(utf16.Encode([]rune(returnResponse)))
 	counter := 1
 	ownerUsernames := s.GetOwnerUsernames(chat)
-	log.Println("ownerUsernames: ", ownerUsernames)
 	isConflicted := false
+	conflictCount := 0
+	hasRejectTx := false
 	for _, result := range queueTransactionResponse.Results {
 		if result.Type == ConflictType {
-			// conflict start handling
-			returnResponse += "\n`Transactions with Conflicts started <<<<<<<<<<<<<<< `\n\n"
-			if result.Nonce != -1 {
-				returnResponse += fmt.Sprintf("Reason: %v These transactions conflict as they use the same nonce. Executing one will automatically replace the other(s). [Learn more](https://help.safe.global/en/articles/4730252-why-are-transactions-with-the-same-nonce-conflicting-with-each-other)\n\n", result.Nonce)
-			}
+			// if header says that it is conflict, then initialize conflict logic
 			isConflicted = true
 			continue
 		}
 		if result.Type != TransactionType {
 			continue
 		}
+		txType := result.Transaction.TxInfo.Type
+
+		if result.ConflictType == "HasNext" && txType != "Custom" {
+			// conflicted tx
+			conflictCount++
+			continue
+		}
 
 		// transaction info
-		txType := result.Transaction.TxInfo.Type
 		eachTxResponse := ""
 		switch txType {
 		case "Transfer":
@@ -142,10 +153,7 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 			toAddress := result.Transaction.TxInfo.Recipient.Value
 			currency := NativeToken[network]
 			if result.Transaction.TxInfo.TransferInfo.Type != "NATIVE_COIN" {
-				currency = result.Transaction.TxInfo.TransferInfo.Type
-			}
-			if result.ConflictType == "HasNext" {
-				// conflicted tx
+				currency = result.Transaction.TxInfo.TransferInfo.TokenSymbol
 			}
 
 			value := s.ParseBalance(result.Transaction.TxInfo.TransferInfo.Value, 18)
@@ -155,7 +163,23 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 			confirmationsRequired := result.Transaction.ExecutionInfo.ConfirmationsRequired
 			confirmationsSubmitted := result.Transaction.ExecutionInfo.ConfirmationsSubmitted
 
-			line1 := fmt.Sprintf("%v) Transfer %v `$%v` (nonce=`%v`):\n", counter, value, strings.ToUpper(currency), nonce)
+			// conflict end handling
+			conflictMsg := ":\n"
+			if isConflicted && result.ConflictType == "End" {
+				if hasRejectTx {
+					returnResponse += GetRejectMessage(counter, result, conflictCount, chat)
+					isConflicted = false
+					conflictCount = 0
+					hasRejectTx = false
+					counter += 1
+					break
+				}
+				conflictMsg = fmt.Sprintf(", (conflicts=`%v`):\n", conflictCount)
+				isConflicted = false
+				conflictCount = 0
+			}
+
+			line1 := fmt.Sprintf("%v) Transfer %v `$%v` (nonce=`%v`)%v", counter, value, strings.ToUpper(currency), nonce, conflictMsg)
 			line2 := fmt.Sprintf("\nFrom: `%v`\nTo: `%v`\n", fromAddress, toAddress)
 			line3 := fmt.Sprintf("\nSigning Threshold: %v/%v\n", confirmationsSubmitted, confirmationsRequired)
 			eachTxResponse += line1 + line2 + line3
@@ -173,7 +197,7 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 					username, ok := ownerUsernames[signerValue]
 					allSigners[signerValue] = fmt.Sprintf("`%v` ", signerValue)
 					if ok && len(username) > 0 {
-						allSigners[signerValue] += fmt.Sprintf("- *@%s*  👆", username)
+						allSigners[signerValue] += fmt.Sprintf("- *@%s* ", username)
 					}
 				}
 				confirmText := "\nConfirmations:\n"
@@ -186,7 +210,7 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 				eachTxResponse += confirmText
 
 				if confirmationsRequired-confirmationsSubmitted > 0 {
-					unconfirmedText := "\nNeed confirmations from:\n"
+					unconfirmedText := fmt.Sprintf("\nNeed %v confirmation(s) from:\n", confirmationsRequired-confirmationsSubmitted)
 					index := 1
 					for addr, username := range allSigners {
 						_, ok := confirmedSigners[addr]
@@ -206,19 +230,29 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 
 			// link to tx
 			link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", chat.Chain, common.HexToAddress(chat.SafeAddress), result.Transaction.Id)
-			line4 := fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n\n", link)
+			line4 := fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n-----------------------------------------------\n", link)
 			eachTxResponse += line4
-
-			// conflict end handling
-			if isConflicted && result.ConflictType == "End" {
-				eachTxResponse += "`Transactions with Conflicts ended >>>>>>>>>>>>>>> `\n\n"
-				isConflicted = false
-
-			}
 
 			returnResponse += eachTxResponse
 			counter += 1
+		case "Custom":
+			// conflict end handling
+			fmt.Println("in Custom side", isConflicted, result)
+			eachTxResponse := ""
+			if isConflicted && result.ConflictType == "End" {
+				eachTxResponse = GetRejectMessage(counter, result, conflictCount, chat)
+				isConflicted = false
+				conflictCount = 0
+				hasRejectTx = false
+				counter += 1
+			} else if isConflicted {
+				hasRejectTx = true
+			}
+			returnResponse += eachTxResponse
+		default:
+			log.Println("Default was called")
 		}
 	}
+	returnResponse = fmt.Sprintf("*Pending Transactions* (count=`%v`):\n\n", counter-1) + returnResponse
 	return returnResponse
 }

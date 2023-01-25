@@ -7,7 +7,6 @@ import (
 	"github.com/voyage-finance/voyage-tg-server/http_server"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"unicode/utf16"
 
@@ -186,12 +185,8 @@ func main() {
 			)
 			msg.ReplyMarkup = startButton
 		case "queue":
-			args := update.Message.CommandArguments()
-			limit, _ := strconv.ParseInt(args, 10, 64)
-			if limit == 0 {
-				limit = 3
-			}
-			msg.Text = s.QueueTransaction(&msg, update.Message.Chat.ID, limit)
+			msg.Text = s.QueueTransactionV2(&msg, update.Message.Chat.ID)
+			msg.ParseMode = "Markdown"
 		case "balance":
 			chatId := update.Message.Chat.ID
 			msg.Text = s.QueryTokenBalance(chatId)
@@ -244,9 +239,6 @@ func main() {
 				break
 			}
 			msg.Text = s.RemoveSigner(signMessage, update.Message.From.UserName)
-		case "queue_v2":
-			msg.Text = s.QueueTransactionV2(&msg, update.Message.Chat.ID)
-			msg.ParseMode = "Markdown"
 		default:
 			msg.Text = "I don't know that command"
 		}
