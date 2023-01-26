@@ -232,7 +232,7 @@ func main() {
 				json.Unmarshal(resp.Body(), &rsp)
 				msg.Text = rsp.Choices[0].Text
 			}
-		case "remove_signer":
+		case "remove":
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
 			if !signMessage.IsVerified {
 				msg.Text = fmt.Sprintf("You have not verified the message. Please send /verify@%v", bot.Self.UserName)
