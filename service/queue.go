@@ -100,9 +100,9 @@ func (s *Service) GetOwnerUsernames(chat *models.Chat) map[string]string {
 }
 
 func GetRejectMessage(counter int, result ResultType, conflictCount int, chat *models.Chat) string {
-	line1 := fmt.Sprintf("%v) Rejection (nonce=`%v`), (conflicts=`%v`)\n\n", counter, result.Transaction.ExecutionInfo.Nonce, conflictCount+1)
+	line1 := fmt.Sprintf("*%v) Rejection* (nonce=`%v`), (conflicts=`%v`)\n\n", counter, result.Transaction.ExecutionInfo.Nonce, conflictCount+1)
 	link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", chat.Chain, common.HexToAddress(chat.SafeAddress), result.Transaction.Id)
-	line2 := fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n-----------------------------------------------\n", link)
+	line2 := fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n\n----------\n\n", link)
 	return line1 + line2
 }
 
@@ -149,7 +149,7 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 		eachTxResponse := ""
 		switch txType {
 		case "Transfer":
-			fromAddress := result.Transaction.TxInfo.Sender.Value
+			//fromAddress := result.Transaction.TxInfo.Sender.Value
 			toAddress := result.Transaction.TxInfo.Recipient.Value
 			currency := NativeToken[network]
 			if result.Transaction.TxInfo.TransferInfo.Type != "NATIVE_COIN" {
@@ -179,9 +179,9 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 				conflictCount = 0
 			}
 
-			line1 := fmt.Sprintf("%v) Transfer %v `$%v` (nonce=`%v`)%v", counter, value, strings.ToUpper(currency), nonce, conflictMsg)
-			line2 := fmt.Sprintf("\nFrom: `%v`\nTo: `%v`\n", fromAddress, toAddress)
-			line3 := fmt.Sprintf("\nSigning Threshold: %v/%v\n", confirmationsSubmitted, confirmationsRequired)
+			line1 := fmt.Sprintf("*%v) Transfer %v* `$%v` (nonce=`%v`)%v", counter, value, strings.ToUpper(currency), nonce, conflictMsg)
+			line2 := fmt.Sprintf("\n*To*: `%v`\n", toAddress)
+			line3 := fmt.Sprintf("\n*Signing Threshold:* %v/%v\n", confirmationsSubmitted, confirmationsRequired)
 			eachTxResponse += line1 + line2 + line3
 
 			// signers/owners handling
@@ -191,36 +191,35 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 				var eachTransactionResponse EachTransactionResponse
 				json.Unmarshal(resp.Body(), &eachTransactionResponse)
 				allSigners := map[string]string{}
-				// run through signer of tx and store thir usernames
+				// run through signer of tx and store their usernames
 				for _, signer := range eachTransactionResponse.DetailedExecutionInfo.Signers {
 					signerValue := strings.ToLower(signer.Value)
 					username, ok := ownerUsernames[signerValue]
-					allSigners[signerValue] = fmt.Sprintf("`%v` ", signerValue)
 					if ok && len(username) > 0 {
-						allSigners[signerValue] += fmt.Sprintf("- *@%s* ", username)
+						allSigners[signerValue] += fmt.Sprintf("*@%s* ", username)
 					}
 				}
-				confirmText := "\nConfirmations:\n"
+				confirmText := "\n*Confirmations:*\n"
 				confirmedSigners := map[string]bool{}
-				for index, confirm := range eachTransactionResponse.DetailedExecutionInfo.Confirmations {
+				for _, confirm := range eachTransactionResponse.DetailedExecutionInfo.Confirmations {
 					signer := strings.ToLower(confirm.Signer.Value)
-					confirmText += fmt.Sprintf("%v. %v \n", index+1, allSigners[signer])
+					confirmText += fmt.Sprintf("✅ %v \n", allSigners[signer])
 					confirmedSigners[signer] = true
 				}
 				eachTxResponse += confirmText
 
 				if confirmationsRequired-confirmationsSubmitted > 0 {
-					unconfirmedText := fmt.Sprintf("\nNeed %v confirmation(s) from:\n", confirmationsRequired-confirmationsSubmitted)
+					unconfirmedText := fmt.Sprintf("\n*Need %v confirmation(s) from:*\n", confirmationsRequired-confirmationsSubmitted)
 					index := 1
 					for addr, username := range allSigners {
 						_, ok := confirmedSigners[addr]
 						if ok {
 							continue
 						}
-						unconfirmedText += fmt.Sprintf("%v. %v\n", index, username)
+						unconfirmedText += fmt.Sprintf("%s ", username)
 						index++
 					}
-					eachTxResponse += unconfirmedText + "\n"
+					eachTxResponse += unconfirmedText + "\n\n"
 
 				}
 
@@ -230,7 +229,7 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 
 			// link to tx
 			link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", chat.Chain, common.HexToAddress(chat.SafeAddress), result.Transaction.Id)
-			line4 := fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n-----------------------------------------------\n", link)
+			line4 := fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n\n----------\n\n", link)
 			eachTxResponse += line4
 
 			returnResponse += eachTxResponse
@@ -253,6 +252,6 @@ func (s *Service) QueueTransactionV2(m *tgbotapi.MessageConfig, id int64) string
 			log.Println("Default was called")
 		}
 	}
-	returnResponse = fmt.Sprintf("*Pending Transactions* (count=`%v`):\n\n", counter-1) + returnResponse
+	returnResponse = fmt.Sprintf("⏳ *Pending Transactions* (count=`%v`):\n\n\n", counter-1) + returnResponse
 	return returnResponse
 }
