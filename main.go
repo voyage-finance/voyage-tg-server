@@ -110,7 +110,7 @@ func main() {
 					/setup: submit gnosis safe wallet address, e.g: 0x......
 					/queue: check transactions in pending pool
 					/balance: check token balances
-					/remove_signer: removes signer of user
+					/remove: remove signer of user
 			`
 		case "this":
 			chatId := update.Message.Chat.ID
