@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/voyage-finance/voyage-tg-server/http_server"
+	"github.com/voyage-finance/voyage-tg-server/transaction/queue"
 	"log"
 	"os"
 	"strings"
@@ -185,7 +186,8 @@ func main() {
 			)
 			msg.ReplyMarkup = startButton
 		case "queue":
-			msg.Text = s.QueueTransactionV2(&msg, update.Message.Chat.ID)
+			queueHandler := queue.NewQueuedHandler(s)
+			msg.Text = queueHandler.Handle(update.Message.Chat.ID)
 			msg.ParseMode = "Markdown"
 		case "balance":
 			chatId := update.Message.Chat.ID
