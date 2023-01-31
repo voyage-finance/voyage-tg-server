@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/voyage-finance/voyage-tg-server/http_server"
+	"github.com/voyage-finance/voyage-tg-server/transaction/builder"
 	"github.com/voyage-finance/voyage-tg-server/transaction/queue"
 	"log"
 	"os"
@@ -241,6 +242,11 @@ func main() {
 				break
 			}
 			msg.Text = s.RemoveSigner(signMessage, update.Message.From.UserName)
+		case "request":
+			requestHandler := builder.NewRequestHandler(update.Message.Chat.ID, s, update.Message.From.UserName)
+			args := update.Message.CommandArguments()
+			msg.Text = requestHandler.CreateRequest(args)
+			msg.ParseMode = "Markdown"
 		default:
 			msg.Text = "I don't know that command"
 		}
