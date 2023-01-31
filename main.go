@@ -106,12 +106,12 @@ func main() {
 		case "help":
 			log.Printf("Chat id: %d\n", update.Message.Chat.ID)
 			msg.Text = `Commands:
-					/this: show current wallet info
-					/verify: generate random message to sign
-					/setup: submit gnosis safe wallet address, e.g: 0x......
-					/queue: check transactions in pending pool
-					/balance: check token balances
-					/remove: remove signer of user
+					/this: show safe vault info
+					/link: link a safe vault to the channel
+					/setup: link your wallet address to your telegram account
+					/remove: unlink your wallet address from your telegram account
+					/queue: show pending safe vault transactions
+					/balance: check safe vault token balances
 			`
 		case "this":
 			chatId := update.Message.Chat.ID
@@ -168,7 +168,7 @@ func main() {
 				),
 			)
 			msg.ReplyMarkup = safeButton
-		case "verify":
+		case "setup":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
 			// Message of Direct Message
@@ -198,7 +198,7 @@ func main() {
 			e.Length = 16
 			msg.Entities = append(msg.Entities, e)
 
-		case "setup":
+		case "link":
 			args := update.Message.CommandArguments()
 			chainAndAddr := strings.Split(args, ":")
 			if len(chainAndAddr) != 2 {
