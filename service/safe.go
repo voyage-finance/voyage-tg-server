@@ -298,8 +298,7 @@ type StatusResp struct {
 	Owners    []string `jsom:"owners"`
 }
 
-func (s *Service) Status(chatId int64) []string {
-	chat := s.QueryChat(chatId)
+func (s *Service) QuerySafeData(chat *models.Chat) StatusResp {
 	network := "mainnet"
 	if chat.Chain == "matic" {
 		network = "polygon"
@@ -309,6 +308,12 @@ func (s *Service) Status(chatId int64) []string {
 
 	var statusResp StatusResp
 	_ = json.Unmarshal(resp.Body(), &statusResp)
+	return statusResp
+}
+
+func (s *Service) Status(chatId int64) []string {
+	chat := s.QueryChat(chatId)
+	statusResp := s.QuerySafeData(chat)
 	// make lower cased
 	for k, v := range statusResp.Owners {
 		// to modify the value at index k in the slice

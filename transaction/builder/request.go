@@ -80,6 +80,10 @@ func (requestHandler *RequestHandler) ValidateBalance() string {
 	return ""
 }
 
+func (requestHandler *RequestHandler) GetThreshold() int64 {
+	return requestHandler.s.QuerySafeData(requestHandler.chat).Threshold
+}
+
 func (requestHandler *RequestHandler) CreateRequest(args string) string {
 	errMsg := requestHandler.ValidateArgs(args)
 	if errMsg != "" {
@@ -98,7 +102,7 @@ func (requestHandler *RequestHandler) CreateRequest(args string) string {
 	response := fmt.Sprintf("🙏 New Request!\n\n")
 	response += fmt.Sprintf("Transfer %v $%v\n\n", requestHandler.amount, strings.ToUpper(requestHandler.currency))
 	response += fmt.Sprintf("To: `%v`\n\n", requestHandler.to)
-	response += fmt.Sprintf("*Need %v confirmation(s) from:*\n", len(requestHandler.ownersMap))
+	response += fmt.Sprintf("*Need %v confirmation(s) from:*\n", requestHandler.GetThreshold())
 	for _, username := range requestHandler.ownersMap {
 		response += fmt.Sprintf("*@%v* ", username)
 	}
