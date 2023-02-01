@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/transaction"
 	"log"
 	"strings"
@@ -69,21 +68,6 @@ func (handler *QueuedHandler) HandleSettingsChange(settingChange transaction.TxI
 /*
 Signers Confirmation section <<<<<
 */
-func (handler *QueuedHandler) GetOwnerUsernames(chat *models.Chat) map[string]string {
-	var result = map[string]string{}
-	var signers []models.Signer
-	if chat.Signers != "" {
-		err := json.Unmarshal([]byte(chat.Signers), &signers)
-		if err != nil {
-			log.Printf("Cannot get Signer in Queue request: %s\n", err.Error())
-			return map[string]string{}
-		}
-	}
-	for _, signer := range signers {
-		result[strings.ToLower(signer.Address)] = signer.Name
-	}
-	return result
-}
 
 func (handler *QueuedHandler) HandleConfirmations(id string, confirmationsRequired uint64, confirmationsSubmitted uint64) string {
 	// signers/owners handling
@@ -207,7 +191,7 @@ func (handler *QueuedHandler) Handle(id int64) string {
 	returnResponse := ""
 	//startOffset := len(utf16.Encode([]rune(returnResponse)))
 	counter := 1
-	handler.OwnerUsernames = handler.GetOwnerUsernames(chat)
+	handler.OwnerUsernames = handler.s.GetOwnerUsernames(chat)
 
 resultLoop:
 	for i, result := range queueTransactionResponse.Results {

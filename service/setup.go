@@ -85,13 +85,17 @@ func (s *Service) GetOrCreateUser(userId int64, userName string) models.User {
 	return user
 }
 
-func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64) models.SignMessage {
+func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64, forceUpdate bool) models.SignMessage {
 	var signMessage models.SignMessage
 	err := s.DB.First(&signMessage, "chat_id = ? AND user_id = ?", chatId, userId).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		message := "0x" + s.GenerateMessage(10)
 		signMessage = models.SignMessage{UserID: userId, ChatID: chatId, Message: message}
 		s.DB.Create(&signMessage)
+	} else if forceUpdate {
+		signMessage.Message = "0x" + s.GenerateMessage(10)
+		signMessage.IsVerified = false
+		s.DB.Save(&signMessage)
 	}
 	return signMessage
 }

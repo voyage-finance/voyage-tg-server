@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/voyage-finance/voyage-tg-server/models"
 	"log"
 	"strings"
 	"unicode/utf16"
@@ -84,23 +85,21 @@ func (p *Parameter) String() string {
 	return fmt.Sprintf("[Name: %s, Type: %s, Value: %s]", p.Name, p.Type, p.Value)
 }
 
-func (s *Service) QueryTokenBalance(id int64) string {
-	chat := s.QueryChat(id)
-	addr := common.HexToAddress(chat.SafeAddress)
+func (s *Service) GetBalance(chat *models.Chat) (map[string]float64, error) {
 	network := "mainnet"
 	if chat.Chain == "matic" {
 		network = "polygon"
 	}
-	r := fmt.Sprintf("https://safe-transaction-%s.safe.global/api/v1/safes/%s/balances/?trusted=false&exclude_spam=false", network, addr.Hex())
+	r := fmt.Sprintf("https://safe-transaction-%s.safe.global/api/v1/safes/%s/balances/?trusted=false&exclude_spam=false", network, chat.SafeAddress)
 	resp, err := s.Client.R().EnableTrace().Get(r)
 	if err != nil {
-		return err.Error()
+		return nil, err
 	}
 	var balances []TokenBalance
 	json.Unmarshal(resp.Body(), &balances)
 	supportedCurrencies, err := s.Client.R().EnableTrace().Get("https://api.coingecko.com/api/v3/coins/list")
 	if err != nil {
-		return err.Error()
+		return nil, err
 	}
 	var currencies []Currency
 	json.Unmarshal(supportedCurrencies.Body(), &currencies)
@@ -109,14 +108,13 @@ func (s *Service) QueryTokenBalance(id int64) string {
 		m[c.Symbol] = true
 	}
 
-	ret := "💰 Account Balance\n"
-	index := 1
+	balanceMap := map[string]float64{}
 	for _, balance := range balances {
 		if balance.Token.Symbol == "" {
-			if chat.Chain == "eth" {
+			if network == "mainnet" {
 				balance.Token.Symbol = "ETH"
 			}
-			if chat.Chain == "matic" {
+			if network == "polygon" {
 				balance.Token.Symbol = "MATIC"
 			}
 
@@ -124,17 +122,35 @@ func (s *Service) QueryTokenBalance(id int64) string {
 		if balance.Token.Decimals == 0 {
 			balance.Token.Decimals = 18
 		}
-		if m[strings.ToLower(balance.Token.Symbol)] {
+		symbol := strings.ToLower(balance.Token.Symbol)
+		if m[symbol] {
 			formatBalance, _ := decimal.NewFromString(balance.Balance)
 			formatBalance = formatBalance.Shift(0 - int32(balance.Token.Decimals))
 			formatBalance = formatBalance.Truncate(4)
 			fValue, _ := formatBalance.Float64()
-			hValue := humanize.Commaf(fValue)
-			ret += fmt.Sprintf(`
-			%d. $%s - %s
-			`, index, strings.ToUpper(balance.Token.Symbol), hValue)
-			index++
+			balanceMap[symbol] = fValue
 		}
+	}
+	return balanceMap, nil
+}
+
+func (s *Service) QueryTokenBalance(id int64) string {
+	chat := s.QueryChat(id)
+
+	balanceMap, err := s.GetBalance(chat)
+	if err != nil {
+		return err.Error()
+	}
+	ret := "💰 Account Balance\n"
+	index := 1
+	for symbol, balance := range balanceMap {
+
+		hValue := humanize.Commaf(balance)
+		ret += fmt.Sprintf(`
+			%d. $%s - %s
+			`, index, strings.ToUpper(symbol), hValue)
+		index++
+
 	}
 	return ret
 
@@ -147,6 +163,13 @@ func (s *Service) ParseBalance(bal string, decimals int32) string {
 	fValue, _ := formatBalance.Float64()
 	hValue := humanize.Commaf(fValue)
 	return hValue
+
+}
+
+func (s *Service) SerializeBalance(bal string, decimals int32) string {
+	formatBalance, _ := decimal.NewFromString(bal)
+	formatBalance = formatBalance.Shift(decimals)
+	return formatBalance.String()
 
 }
 
@@ -275,8 +298,7 @@ type StatusResp struct {
 	Owners    []string `jsom:"owners"`
 }
 
-func (s *Service) Status(chatId int64) []string {
-	chat := s.QueryChat(chatId)
+func (s *Service) QuerySafeData(chat *models.Chat) StatusResp {
 	network := "mainnet"
 	if chat.Chain == "matic" {
 		network = "polygon"
@@ -286,6 +308,12 @@ func (s *Service) Status(chatId int64) []string {
 
 	var statusResp StatusResp
 	_ = json.Unmarshal(resp.Body(), &statusResp)
+	return statusResp
+}
+
+func (s *Service) Status(chatId int64) []string {
+	chat := s.QueryChat(chatId)
+	statusResp := s.QuerySafeData(chat)
 	// make lower cased
 	for k, v := range statusResp.Owners {
 		// to modify the value at index k in the slice
@@ -293,4 +321,20 @@ func (s *Service) Status(chatId int64) []string {
 		statusResp.Owners[k] = strings.ToLower(v)
 	}
 	return statusResp.Owners
+}
+
+func (s *Service) GetOwnerUsernames(chat *models.Chat) map[string]string {
+	var result = map[string]string{}
+	var signers []models.Signer
+	if chat.Signers != "" {
+		err := json.Unmarshal([]byte(chat.Signers), &signers)
+		if err != nil {
+			log.Printf("Cannot get Signer in Queue request: %s\n", err.Error())
+			return map[string]string{}
+		}
+	}
+	for _, signer := range signers {
+		result[strings.ToLower(signer.Address)] = strings.ToLower(signer.Name)
+	}
+	return result
 }
