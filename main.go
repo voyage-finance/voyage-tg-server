@@ -6,6 +6,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/voyage-finance/voyage-tg-server/http_server"
 	"github.com/voyage-finance/voyage-tg-server/transaction/builder"
+	"github.com/voyage-finance/voyage-tg-server/transaction/history"
 	"github.com/voyage-finance/voyage-tg-server/transaction/queue"
 	"log"
 	"os"
@@ -83,9 +84,6 @@ func main() {
 	u.Timeout = 60
 
 	updates := bot.GetUpdatesChan(u)
-
-	// n := service.Notification{Bot: bot, S: &s}
-	// go n.Start()
 
 	for update := range updates {
 		if update.Message == nil { // ignore non-Message updates
@@ -192,7 +190,8 @@ func main() {
 			msg.Text = queueHandler.Handle(update.Message.Chat.ID)
 			msg.ParseMode = "Markdown"
 		case "leaderboard":
-
+			historyHandler := history.NewQueuedHandler(s)
+			msg.Text = historyHandler.Handle(update.Message.Chat.ID)
 			msg.ParseMode = "Markdown"
 		case "balance":
 			chatId := update.Message.Chat.ID

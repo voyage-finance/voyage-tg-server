@@ -97,7 +97,13 @@ type DetailedExecutionInfo struct {
 	SubmittedAt   uint64 `json:"submittedAt"`
 	Signers       []AddressValue
 	Confirmations []ConfirmationSigner
+	Executor      Executor `json:"executor"`
 }
+
+type Executor struct {
+	Value string
+}
+
 type ConfirmationSigner struct {
 	Signer      AddressValue
 	Signature   string
