@@ -9,4 +9,5 @@ import (
 func OnboardingRoute(router *mux.Router, s service.Service) {
 	router.HandleFunc("/test", controllers.Test(s)).Methods("GET")             //add this
 	router.HandleFunc("/verify", controllers.VerifyMessage(s)).Methods("POST") //add this
+	router.HandleFunc("/link", controllers.LinkSafe(s)).Methods("POST")        //add this
 }

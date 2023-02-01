@@ -13,6 +13,7 @@ import (
 	"github.com/voyage-finance/voyage-tg-server/service"
 	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -84,6 +85,13 @@ type SignedMessageSerializer struct {
 	Signature string          `json:"signature"`
 }
 
+type LinkSafeSerializer struct {
+	Id          govalidator.Int `json:"id"`
+	Message     string          `json:"message"`
+	Signature   string          `json:"signature"`
+	SafeAddress string          `json:"safeAddress"`
+}
+
 func VerifyMessage(s service.Service) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		// parse request body
@@ -123,9 +131,9 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 			return
 		}
 
-		fmt.Println("publicKey: ", publicKey)
-		fmt.Println("GetAddress: ", message.GetAddress())
-		fmt.Println("GetStatement: ", message.GetStatement())
+		log.Println("publicKey: ", publicKey)
+		log.Println("GetAddress: ", message.GetAddress())
+		log.Println("GetStatement: ", message.GetStatement())
 
 		// 3.0 check sign message in db
 		var signMessage models.SignMessage
@@ -167,5 +175,95 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 
 		json.NewEncoder(rw).Encode(response)
 
+	}
+}
+
+func LinkSafe(s service.Service) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		// parse request body
+		var linkSafeSerializer LinkSafeSerializer
+		rules := govalidator.MapData{
+			"id":          []string{"required"},
+			"message":     []string{"required"},
+			"signature":   []string{"required"},
+			"safeAddress": []string{"required"},
+		}
+		opts := govalidator.Options{
+			Request: r,
+			Data:    &linkSafeSerializer,
+			Rules:   rules,
+		}
+		parsedValue := govalidator.New(opts)
+		e := parsedValue.ValidateJSON()
+		// 1.0 if body of request is not valid
+		if len(e) != 0 {
+			err := map[string]interface{}{"validationError": e}
+			rw.Header().Set("Content-type", "application/json")
+			json.NewEncoder(rw).Encode(err)
+			return
+		}
+
+		// 2.0 validate message
+		message, err := siwe.ParseMessage(linkSafeSerializer.Message)
+		response := ""
+		if err != nil {
+			response = fmt.Sprintf("message error: %v \n", err)
+			ReturnHttpBadResponse(rw, response)
+			return
+		}
+		publicKey, err := message.VerifyEIP191(linkSafeSerializer.Signature)
+		if err != nil {
+			response = fmt.Sprintf("signature error: %v \n", err)
+			ReturnHttpBadResponse(rw, response)
+			return
+		}
+
+		log.Println("publicKey: ", publicKey)
+		log.Println("GetAddress: ", message.GetAddress())
+		log.Println("GetStatement: ", message.GetStatement())
+
+		// 3.0 check sign message in db
+		var signMessage models.SignMessage
+		err = s.DB.First(&signMessage, "id = ? AND message = ?", linkSafeSerializer.Id.Value, message.GetStatement()).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			ReturnHttpBadResponse(rw, "Message not found!")
+			return
+		}
+
+		// No need to check verification of SignMessage in Link logic
+
+		// 4.0 check user existence in db
+		var user models.User
+		err = s.DB.First(&user, signMessage.UserID).Error
+		if err != nil {
+			ReturnHttpBadResponse(rw, fmt.Sprintf("No user in system with id = %v", signMessage.UserID))
+			return
+		}
+
+		// 5.0 save new safeAddress
+		addr := strings.ToLower(message.GetAddress().String()) // lowered addr
+		chat := s.QueryChat(signMessage.ChatID)
+		if chat.SafeAddress != linkSafeSerializer.SafeAddress {
+			chat.SafeAddress = linkSafeSerializer.SafeAddress
+			s.DB.Save(chat)
+		}
+
+		// 5.1 check whether signing address exists in Safe UI
+		owners := s.Status(signMessage.ChatID) // lowered in slice
+		if !slices.Contains(owners, addr) {
+			ReturnHttpBadResponse(rw, fmt.Sprintf("This is not owner %v", addr))
+			return
+		}
+
+		response = s.AddSigner(signMessage.ChatID, user.UserName, addr)
+		if response == "" {
+			response = fmt.Sprintf("Added signer, address: %s", addr)
+		}
+
+		// 6.0 update signMessage
+		signMessage.IsVerified = true
+		s.DB.Save(&signMessage)
+
+		json.NewEncoder(rw).Encode(response)
 	}
 }

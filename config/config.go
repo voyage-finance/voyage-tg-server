@@ -11,7 +11,7 @@ func Init() {
 	// Getting configuration dir
 	exPath, err := os.Getwd()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		os.Exit(1)
 	}
 	exPath += "/config/"

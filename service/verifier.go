@@ -5,6 +5,7 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/models"
+	"log"
 	"math/rand"
 	"time"
 
@@ -71,14 +72,14 @@ func (s *Service) SendVerifyButton(bot *tgbotapi.BotAPI, update tgbotapi.Update,
 	var chat models.Chat
 	s.DB.First(&chat, "chat_id = ?", signMessage.ChatID)
 	if !chat.Init {
-		fmt.Println("SendVerifyButton error: chat does not exist")
+		log.Println("SendVerifyButton error: chat does not exist")
 		return
 	}
 	dmText += fmt.Sprintf(". Chat: `%v`", chat.Title)
 	dmMsg := tgbotapi.NewMessage(update.Message.From.ID, dmText)
 	dmMsg.ReplyMarkup = safeButton
 	if _, err := bot.Send(dmMsg); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 }
 
@@ -94,7 +95,7 @@ func (s *Service) SendLinkButton(bot *tgbotapi.BotAPI, update tgbotapi.Update, s
 	var chat models.Chat
 	s.DB.First(&chat, "chat_id = ?", signMessage.ChatID)
 	if !chat.Init {
-		fmt.Println("SendVerifyButton error: chat does not exist")
+		log.Println("SendVerifyButton error: chat does not exist")
 		return
 	}
 
@@ -107,7 +108,7 @@ func (s *Service) SendLinkButton(bot *tgbotapi.BotAPI, update tgbotapi.Update, s
 	dmMsg.ReplyMarkup = safeButton
 	dmMsg.ParseMode = "Markdown"
 	if _, err := bot.Send(dmMsg); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 }
