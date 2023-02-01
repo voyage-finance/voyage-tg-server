@@ -338,3 +338,14 @@ func (s *Service) GetOwnerUsernames(chat *models.Chat) map[string]string {
 	}
 	return result
 }
+
+func (s *Service) GetChainId(chain string) int {
+	chain = strings.ToLower(chain)
+	switch chain {
+	case "matic":
+		return 137
+	case "polygon":
+		return 137
+	}
+	return 1
+}
