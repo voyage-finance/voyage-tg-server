@@ -98,6 +98,9 @@ func (handler *QueuedHandler) HandleConfirmations(id string, confirmationsRequir
 			confirmedSigners[signer] = true
 		}
 		confirmationResult += confirmText
+		if confirmationsSubmitted == 0 {
+			confirmationsSubmitted = uint64(len(confirmedSigners))
+		}
 
 		if confirmationsRequired-confirmationsSubmitted > 0 {
 			unconfirmedText := fmt.Sprintf("\n*Need %v confirmation(s) from:*\n", confirmationsRequired-confirmationsSubmitted)
