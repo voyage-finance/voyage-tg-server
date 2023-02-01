@@ -94,7 +94,7 @@ func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64, forceUpdate
 		s.DB.Create(&signMessage)
 	} else if forceUpdate {
 		signMessage.Message = "0x" + s.GenerateMessage(10)
-		signMessage.IsVerified = false
+		//signMessage.IsVerified = false
 		s.DB.Save(&signMessage)
 	}
 	return signMessage

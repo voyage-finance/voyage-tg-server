@@ -120,7 +120,7 @@ func main() {
 			chat := s.QueryChat(chatId)
 			s1 := "🔓 Safe address\n"
 			msg.Text = s1
-			fmt.Println(chat)
+			log.Println(chat)
 			// 1. Safe address should be bold
 			var e1 tgbotapi.MessageEntity
 			e1.Type = "bold"
@@ -241,7 +241,7 @@ func main() {
 		case "remove":
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			if !signMessage.IsVerified {
-				msg.Text = fmt.Sprintf("You have not verified the message. Please send /verify@%v", bot.Self.UserName)
+				msg.Text = fmt.Sprintf("You have not verified the message. Please send /setup@%v", bot.Self.UserName)
 				break
 			}
 			msg.Text = s.RemoveSigner(signMessage, update.Message.From.UserName)
