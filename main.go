@@ -113,6 +113,7 @@ func main() {
 					/remove: unlink your wallet address from your telegram account
 					/queue: show pending safe vault transactions
 					/balance: check safe vault token balances
+					/request amount $TOKEN: creates a TRANSFER transaction for requester, e.g. /request 1 $eth
 			`
 		case "this":
 			chatId := update.Message.Chat.ID
@@ -171,7 +172,7 @@ func main() {
 			msg.ReplyMarkup = safeButton
 		case "setup":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
-			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
+			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			// Message of Direct Message
 			s.SendVerifyButton(bot, update, signMessage)
 
@@ -198,22 +199,24 @@ func main() {
 			e.Offset = 2
 			e.Length = 16
 			msg.Entities = append(msg.Entities, e)
-
 		case "link":
-			args := update.Message.CommandArguments()
-			chainAndAddr := strings.Split(args, ":")
-			if len(chainAndAddr) != 2 {
-				msg.Text = "Wrong format"
-			} else {
-				s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
-				ret := s.AddSafeWallet(update.Message.Chat.ID, chainAndAddr)
-				if ret != "" {
-					msg.Text = ret
-				} else {
-					msg.Text = fmt.Sprintf("Added safe wallet, address: %s", args)
-				}
-				msg.ChatID = update.Message.From.ID
-			}
+			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
+			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, true)
+			// Message of Direct Message
+			s.SendLinkButton(bot, update, signMessage)
+
+			// Message to reply in chat. Adding conversation start button, in case if user does not have conversation with bot
+			msg.Text = fmt.Sprintf("Please sign message via Sign-In With Ethereum, *@%v*, and choose your Safe Account to link. "+
+				"The message was sent to Direct Message. If you do not see any message, then click the button below", update.Message.From.UserName)
+			msg.ReplyToMessageID = update.Message.MessageID
+			startButtonLink := fmt.Sprintf("https://t.me/%v", bot.Self.UserName)
+			startButton := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("Start conversation", startButtonLink),
+				),
+			)
+			msg.ReplyMarkup = startButton
+			msg.ParseMode = "Markdown"
 		case "ai":
 			args := update.Message.CommandArguments()
 			var request models.AIRequest
@@ -236,7 +239,7 @@ func main() {
 				msg.Text = rsp.Choices[0].Text
 			}
 		case "remove":
-			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID)
+			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			if !signMessage.IsVerified {
 				msg.Text = fmt.Sprintf("You have not verified the message. Please send /verify@%v", bot.Self.UserName)
 				break

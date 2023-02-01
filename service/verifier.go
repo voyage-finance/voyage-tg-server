@@ -81,3 +81,33 @@ func (s *Service) SendVerifyButton(bot *tgbotapi.BotAPI, update tgbotapi.Update,
 		fmt.Println(err)
 	}
 }
+
+func (s *Service) SendLinkButton(bot *tgbotapi.BotAPI, update tgbotapi.Update, signMessage models.SignMessage) {
+	// here we can validate whether user is admin or not
+	r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/link?message=%s&name=%s&msg_id=%v", signMessage.Message, update.Message.From.String(), signMessage.ID)
+	var safeButton = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonURL("Choose Safe", r),
+		),
+	)
+
+	var chat models.Chat
+	s.DB.First(&chat, "chat_id = ?", signMessage.ChatID)
+	if !chat.Init {
+		fmt.Println("SendVerifyButton error: chat does not exist")
+		return
+	}
+
+	dmText := fmt.Sprintf("Please sign message via Sign-In With Ethereum and choose your Safe account to link in chat `%v`", chat.Title)
+	if chat.SafeAddress != "" {
+		dmText = fmt.Sprintf("Chat %v is already linked to Safe `%v`.\nPress the link button below if you wish to update Safe", chat.Title, chat.SafeAddress)
+	}
+
+	dmMsg := tgbotapi.NewMessage(update.Message.From.ID, dmText)
+	dmMsg.ReplyMarkup = safeButton
+	dmMsg.ParseMode = "Markdown"
+	if _, err := bot.Send(dmMsg); err != nil {
+		fmt.Println(err)
+	}
+
+}

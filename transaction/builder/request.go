@@ -102,12 +102,18 @@ func (requestHandler *RequestHandler) CreateRequest(args string) string {
 	response := fmt.Sprintf("🙏 New Request!\n\n")
 	response += fmt.Sprintf("Transfer %v $%v\n\n", requestHandler.amount, strings.ToUpper(requestHandler.currency))
 	response += fmt.Sprintf("To: `%v`\n\n", requestHandler.to)
-	response += fmt.Sprintf("*Need %v confirmation(s) from:*\n", requestHandler.GetThreshold())
+	response += fmt.Sprintf("*Need %v submission(s) from:*\n", requestHandler.GetThreshold())
 	for _, username := range requestHandler.ownersMap {
 		response += fmt.Sprintf("*@%v* ", username)
 	}
-	link := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/link?message=%v&name=%v", "rand", "rand")
-	response += fmt.Sprintf("\n\n[✍️ Sign/Submit it!](%v)", link)
+	link := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/safes/%v:%v/transactions/create/send?amount=%v&to=%v&currency=%v",
+		requestHandler.chat.Chain,
+		requestHandler.chat.SafeAddress,
+		requestHandler.amount,
+		requestHandler.to,
+		requestHandler.currency,
+	)
+	response += fmt.Sprintf("\n\n[✍️ Submit it!](%v)", link)
 	return response
 
 }
