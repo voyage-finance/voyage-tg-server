@@ -180,7 +180,7 @@ func (handler *QueuedHandler) Handle(id int64) string {
 	handler.Currency = chainCurrency
 	handler.SafeAddress = chat.SafeAddress
 
-	r := fmt.Sprintf("https://safe-client.safe.global/v1/chains/%v/safes/%v/transactions/queued", chainId, common.HexToAddress(chat.SafeAddress))
+	r := fmt.Sprintf("https://safe-client.safe.global/v1/chains/%v/safes/%v/transactions/queued?cursor=limit=10000&offset=0", chainId, common.HexToAddress(chat.SafeAddress))
 	resp, err := handler.s.Client.R().EnableTrace().Get(r)
 	if err != nil {
 		return err.Error()
