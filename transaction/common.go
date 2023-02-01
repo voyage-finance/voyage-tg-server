@@ -66,6 +66,15 @@ type Transaction struct {
 	SafeAppInfo   `json:"safeAppInfo"`
 }
 
+type RetrieveTransaction struct {
+	Id            string `json:"txId"`
+	Timestamp     uint64
+	TxStatus      string `json:"txStatus"`
+	TxInfo        `json:"txInfo"`
+	ExecutionInfo `json:"detailedExecutionInfo"`
+	SafeAppInfo   `json:"safeAppInfo"`
+}
+
 // MULTISIG Retrieve
 
 type EachTransactionResponse struct {

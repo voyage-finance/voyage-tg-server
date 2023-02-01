@@ -74,7 +74,6 @@ var message, _ = siwe.InitMessage(
 
 func Test(s service.Service) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
-
 		json.NewEncoder(rw).Encode("Git actions is working")
 	}
 }

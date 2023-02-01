@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
 	"github.com/voyage-finance/voyage-tg-server/transaction"
 )
@@ -36,6 +37,7 @@ type QueuedHandler struct {
 
 	OwnerUsernames      map[string]string
 	ConflictTransaction *transaction.Transaction
+	Chat                *models.Chat
 }
 
 func NewQueuedHandler(s service.Service) *QueuedHandler {

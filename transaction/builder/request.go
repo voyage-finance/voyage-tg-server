@@ -52,7 +52,7 @@ func (requestHandler *RequestHandler) ValidateSetup() string {
 
 	toAddress := ""
 	for addr, username := range requestHandler.ownersMap {
-		if strings.ToLower(username) == requestHandler.username {
+		if strings.ToLower(username) == strings.ToLower(requestHandler.username) {
 			toAddress = addr
 			break
 		}
@@ -106,12 +106,13 @@ func (requestHandler *RequestHandler) CreateRequest(args string) string {
 	for _, username := range requestHandler.ownersMap {
 		response += fmt.Sprintf("*@%v* ", username)
 	}
-	link := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/safes/%v:%v/transactions/create/send?amount=%v&to=%v&currency=%v",
+	link := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/safes/%v:%v/transactions/create/send?amount=%v&to=%v&currency=%v&chatId=%v",
 		requestHandler.chat.Chain,
 		requestHandler.chat.SafeAddress,
 		requestHandler.amount,
 		requestHandler.to,
 		requestHandler.currency,
+		requestHandler.chat.ChatId,
 	)
 	response += fmt.Sprintf("\n\n[✍️ Submit it!](%v)", link)
 	return response

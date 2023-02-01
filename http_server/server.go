@@ -16,6 +16,7 @@ func HandleRequests(s service.Service) {
 	router := mux.NewRouter().StrictSlash(true)
 	// replace http.HandleFunc with myRouter.HandleFunc
 	routes.OnboardingRoute(router, s)
+	routes.NotificationRoute(router, s)
 
 	// server run
 	port := os.Getenv("HTTP_SERVER_PORT")

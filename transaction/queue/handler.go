@@ -166,7 +166,7 @@ func (handler *QueuedHandler) ResolveConflictType(transaction transaction.Transa
 	return nil
 }
 
-func (handler *QueuedHandler) Handle(id int64) string {
+func (handler *QueuedHandler) Setup(id int64) {
 	chat := handler.s.QueryChat(id)
 	chainId := 1
 	chainCurrency := "ETH"
@@ -179,8 +179,14 @@ func (handler *QueuedHandler) Handle(id int64) string {
 	handler.ChainId = chainId
 	handler.Currency = chainCurrency
 	handler.SafeAddress = chat.SafeAddress
+	handler.Chat = chat
+	handler.OwnerUsernames = handler.s.GetOwnerUsernames(chat)
+}
 
-	r := fmt.Sprintf("https://safe-client.safe.global/v1/chains/%v/safes/%v/transactions/queued?cursor=limit=10000&offset=0", chainId, common.HexToAddress(chat.SafeAddress))
+func (handler *QueuedHandler) Handle(id int64) string {
+	handler.Setup(id)
+
+	r := fmt.Sprintf("https://safe-client.safe.global/v1/chains/%v/safes/%v/transactions/queued?cursor=limit=10000&offset=0", handler.ChainId, common.HexToAddress(handler.SafeAddress))
 	resp, err := handler.s.Client.R().EnableTrace().Get(r)
 	if err != nil {
 		return err.Error()
@@ -191,7 +197,6 @@ func (handler *QueuedHandler) Handle(id int64) string {
 	returnResponse := ""
 	//startOffset := len(utf16.Encode([]rune(returnResponse)))
 	counter := 1
-	handler.OwnerUsernames = handler.s.GetOwnerUsernames(chat)
 
 resultLoop:
 	for i, result := range queueTransactionResponse.Results {
