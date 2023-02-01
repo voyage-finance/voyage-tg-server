@@ -112,6 +112,7 @@ func main() {
 					/queue: show pending safe vault transactions
 					/balance: check safe vault token balances
 					/request amount $TOKEN: creates a TRANSFER transaction for requester, e.g. /request 1 $eth
+					/leaderboard: show leader board information
 			`
 		case "this":
 			chatId := update.Message.Chat.ID
