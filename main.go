@@ -55,7 +55,7 @@ func main() {
 	json.Unmarshal(tokens, &ts)
 
 	client := resty.New()
-	infuraAPI := "https://mainnet.infura.io/v3/b85b517bc9ed49bd8fe5eacb6d9a2bc7"
+	infuraAPI := "https://mainnet.infura.io/v3/" + os.Getenv("INFURA_KEY")
 	ethClient, err := ethclient.Dial(infuraAPI)
 	if err != nil {
 		log.Fatal(err)
