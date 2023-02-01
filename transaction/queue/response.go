@@ -3,26 +3,11 @@ package queue
 import (
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
-	"github.com/voyage-finance/voyage-tg-server/transaction"
+	"github.com/voyage-finance/voyage-tg-server/transaction/common"
 )
 
 type AddressValue struct {
 	Value string
-}
-
-type QueuedTransactionResponse struct {
-	Next     int64 `json:"next"`
-	Previous int64 `json:"previous"`
-	Results  []struct {
-		Type                    string `json:"type"`
-		ConflictType            string `json:"conflictType"`
-		Nonce                   int64  `json:"nonce"`
-		transaction.Transaction `json:"transaction"`
-	} `json:"results"`
-}
-
-func (r *QueuedTransactionResponse) TransferHandle() {
-
 }
 
 type QueuedHandler struct {
@@ -36,8 +21,8 @@ type QueuedHandler struct {
 	ConflictCount      int
 
 	OwnerUsernames      map[string]string
-	ConflictTransaction *transaction.Transaction
 	Chat                *models.Chat
+	ConflictTransaction *common.Transaction
 }
 
 func NewQueuedHandler(s service.Service) *QueuedHandler {

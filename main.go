@@ -191,6 +191,9 @@ func main() {
 			queueHandler := queue.NewQueuedHandler(s)
 			msg.Text = queueHandler.Handle(update.Message.Chat.ID)
 			msg.ParseMode = "Markdown"
+		case "leaderboard":
+
+			msg.ParseMode = "Markdown"
 		case "balance":
 			chatId := update.Message.Chat.ID
 			msg.Text = s.QueryTokenBalance(chatId)

@@ -1,4 +1,15 @@
-package transaction
+package common
+
+type TransactionResponse struct {
+	Next     int64 `json:"next"`
+	Previous int64 `json:"previous"`
+	Results  []struct {
+		Type         string `json:"type"`
+		ConflictType string `json:"conflictType"`
+		Nonce        int64  `json:"nonce"`
+		Transaction  `json:"transaction"`
+	} `json:"results"`
+}
 
 type AddressValue struct {
 	Value string
