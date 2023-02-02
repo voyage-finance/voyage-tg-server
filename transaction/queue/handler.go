@@ -133,7 +133,7 @@ func (handler *QueuedHandler) GenerateSignLink(id string) string {
 	return fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n\n----------\n", link)
 }
 
-func (handler *QueuedHandler) HandleTransaction(transaction common2.Transaction) (string, bool) {
+func (handler *QueuedHandler) HandleTransaction(transaction common2.Transaction) (string, string, bool) {
 	value := ""
 	switch transaction.TxInfo.Type {
 	case TransactionTypeTransfer:
@@ -144,12 +144,12 @@ func (handler *QueuedHandler) HandleTransaction(transaction common2.Transaction)
 		value = handler.HandleSettingsChange(transaction.TxInfo)
 	case TransactionTypeCreation:
 		log.Println("NotImplemented! TransactionTypeCreation")
-		return value, false
+		return value, "", false
 	}
 	value += handler.HandleConfirmations(transaction.Id, transaction.ExecutionInfo.ConfirmationsRequired, transaction.ExecutionInfo.ConfirmationsSubmitted)
-	value += handler.GenerateSignLink(transaction.Id)
+	//value += handler.GenerateSignLink(transaction.Id)
 
-	return value, true
+	return value, handler.GenerateSignLink(transaction.Id), true
 }
 
 func (handler *QueuedHandler) ResolveConflictType(transaction common2.Transaction, conflictType string) *common2.Transaction {
@@ -216,7 +216,8 @@ resultLoop:
 			}
 
 			// 2.0 handle transaction
-			txLine, isSupported := handler.HandleTransaction(result.Transaction)
+			txLine, link, isSupported := handler.HandleTransaction(result.Transaction)
+			txLine += link
 			if !isSupported {
 				continue resultLoop
 			}

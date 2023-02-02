@@ -68,7 +68,7 @@ func NotifyRequestSign(s service.Service) http.HandlerFunc {
 
 		queueHandler := queue.NewQueuedHandler(s)
 		queueHandler.Setup(chatIdInt)
-		response, isSupported := queueHandler.HandleTransaction(tx)
+		response, link, isSupported := queueHandler.HandleTransaction(tx)
 
 		if !isSupported {
 			json.NewEncoder(rw).Encode("Error in Transaction parse")
@@ -76,7 +76,7 @@ func NotifyRequestSign(s service.Service) http.HandlerFunc {
 		}
 		response = "🔔New Transaction Alert: \n\n" + response
 
-		isSent := SendBotMessage(response, chatIdInt)
+		isSent := SendBotMessage(response, link, chatIdInt)
 
 		json.NewEncoder(rw).Encode(isSent)
 
