@@ -86,7 +86,7 @@ func (handler *QueuedHandler) HandleConfirmations(id string, confirmationsRequir
 				allSigners[signerValue] += fmt.Sprintf("*@%s* ", username)
 			}
 		}
-		confirmText := fmt.Sprintf("*Confirmations %v:*\n", len(eachTransactionResponse.DetailedExecutionInfo.Confirmations))
+		confirmText := fmt.Sprintf("*%v Confirmation(s):*\n", len(eachTransactionResponse.DetailedExecutionInfo.Confirmations))
 		confirmedSigners := map[string]bool{}
 		for _, confirm := range eachTransactionResponse.DetailedExecutionInfo.Confirmations {
 			signer := strings.ToLower(confirm.Signer.Value)
