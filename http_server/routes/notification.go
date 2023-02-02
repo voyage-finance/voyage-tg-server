@@ -6,6 +6,6 @@ import (
 	"github.com/voyage-finance/voyage-tg-server/service"
 )
 
-func NotificationRoute(router *mux.Router, s service.Service) {
-	router.HandleFunc("/notification/request", controllers.NotifyRequestSign(s)).Methods("POST") //add this
+func NotificationRoute(router *mux.Router, s service.Service, serverBot *controllers.ServerBot) {
+	router.HandleFunc("/notification/request", controllers.NotifyRequestSign(s, serverBot)).Methods("POST") //add this
 }
