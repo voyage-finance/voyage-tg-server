@@ -17,7 +17,7 @@ type RequestNotificationSerializer struct {
 	TxId   string `json:"txId"`
 }
 
-func NotifyRequestSign(s service.Service) http.HandlerFunc {
+func NotifyRequestSign(s service.Service, serverBot *ServerBot) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		// parse request body
 		var requestNotificationSerializer RequestNotificationSerializer
@@ -68,7 +68,7 @@ func NotifyRequestSign(s service.Service) http.HandlerFunc {
 
 		queueHandler := queue.NewQueuedHandler(s)
 		queueHandler.Setup(chatIdInt)
-		response, link, isSupported := queueHandler.HandleTransaction(tx)
+		response, link, isSupported := queueHandler.HandleTransaction(tx, false)
 
 		if !isSupported {
 			json.NewEncoder(rw).Encode("Error in Transaction parse")
@@ -76,7 +76,7 @@ func NotifyRequestSign(s service.Service) http.HandlerFunc {
 		}
 		response = "🔔New Transaction Alert: \n\n" + response
 
-		isSent := SendBotMessage(response, link, chatIdInt)
+		isSent := serverBot.SendBotMessage(response, link, chatIdInt)
 
 		json.NewEncoder(rw).Encode(isSent)
 

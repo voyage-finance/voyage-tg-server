@@ -1,9 +1,7 @@
 package controllers
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"net/http"
@@ -16,30 +14,34 @@ func ReturnHttpBadResponse(rw http.ResponseWriter, response string) {
 	log.Println(response)
 }
 
-func SendBotMessage(msg string, link string, chatId int64) bool {
+type ServerBot struct {
+	bot *tgbotapi.BotAPI
+}
+
+func NewServerBot() *ServerBot {
 	botApiKey := os.Getenv("BOT_API_KEY")
 
-	url := fmt.Sprintf("https://api.telegram.org/bot%v/sendMessage", botApiKey)
+	bot, err := tgbotapi.NewBotAPI(botApiKey)
+	if err != nil {
+		log.Panic(err)
+		return nil
+	}
+	return &ServerBot{bot}
+}
+
+func (serverBot *ServerBot) SendBotMessage(msg string, link string, chatId int64) bool {
 	startButton := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL("✍️ Submit it!", link),
 		),
 	)
-	startButtonJson, _ := json.Marshal(startButton)
-	data := map[string]string{
-		"text":         msg,
-		"chat_id":      fmt.Sprintf("%v", chatId),
-		"parse_mode":   "Markdown",
-		"reply_markup": string(startButtonJson),
-	}
-
-	jsonValue, _ := json.Marshal(data)
-
-	_, err := http.Post(url, "application/json", bytes.NewBuffer(jsonValue))
-
-	if err != nil {
-		log.Println(err.Error())
+	message := tgbotapi.NewMessage(chatId, msg)
+	message.ParseMode = "Markdown"
+	message.ReplyMarkup = startButton
+	if _, err := serverBot.bot.Send(message); err != nil {
+		log.Println(err)
 		return false
 	}
+
 	return true
 }

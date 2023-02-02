@@ -3,6 +3,7 @@ package http_server
 import (
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/voyage-finance/voyage-tg-server/http_server/controllers"
 	"github.com/voyage-finance/voyage-tg-server/http_server/routes"
 	"github.com/voyage-finance/voyage-tg-server/service"
 	"log"
@@ -11,12 +12,12 @@ import (
 )
 
 func HandleRequests(s service.Service) {
-
+	bot := controllers.NewServerBot()
 	// creates a new instance of a mux router
 	router := mux.NewRouter().StrictSlash(true)
 	// replace http.HandleFunc with myRouter.HandleFunc
 	routes.OnboardingRoute(router, s)
-	routes.NotificationRoute(router, s)
+	routes.NotificationRoute(router, s, bot)
 
 	// server run
 	port := os.Getenv("HTTP_SERVER_PORT")

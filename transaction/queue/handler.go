@@ -128,12 +128,16 @@ func (handler *QueuedHandler) HandleConfirmations(id string, confirmationsRequir
 	Signers Confirmation section end >>>>
 */
 
-func (handler *QueuedHandler) GenerateSignLink(id string) string {
+func (handler *QueuedHandler) GenerateSignLinkEmbedded(id string) string {
 	link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", handler.Chain, common.HexToAddress(handler.SafeAddress), id)
 	return fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n\n----------\n", link)
 }
 
-func (handler *QueuedHandler) HandleTransaction(transaction common2.Transaction) (string, string, bool) {
+func (handler *QueuedHandler) GenerateSignLink(id string) string {
+	return fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", handler.Chain, common.HexToAddress(handler.SafeAddress), id)
+}
+
+func (handler *QueuedHandler) HandleTransaction(transaction common2.Transaction, returnEmbedded bool) (string, string, bool) {
 	value := ""
 	switch transaction.TxInfo.Type {
 	case TransactionTypeTransfer:
@@ -148,8 +152,12 @@ func (handler *QueuedHandler) HandleTransaction(transaction common2.Transaction)
 	}
 	value += handler.HandleConfirmations(transaction.Id, transaction.ExecutionInfo.ConfirmationsRequired, transaction.ExecutionInfo.ConfirmationsSubmitted)
 	//value += handler.GenerateSignLink(transaction.Id)
+	link := handler.GenerateSignLinkEmbedded(transaction.Id)
+	if !returnEmbedded {
+		link = handler.GenerateSignLink(transaction.Id)
+	}
 
-	return value, handler.GenerateSignLink(transaction.Id), true
+	return value, link, true
 }
 
 func (handler *QueuedHandler) ResolveConflictType(transaction common2.Transaction, conflictType string) *common2.Transaction {
@@ -216,7 +224,7 @@ resultLoop:
 			}
 
 			// 2.0 handle transaction
-			txLine, link, isSupported := handler.HandleTransaction(result.Transaction)
+			txLine, link, isSupported := handler.HandleTransaction(result.Transaction, true)
 			txLine += link
 			if !isSupported {
 				continue resultLoop
