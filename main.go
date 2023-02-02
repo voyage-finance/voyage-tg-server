@@ -106,13 +106,13 @@ func main() {
 			log.Printf("Chat id: %d\n", update.Message.Chat.ID)
 			msg.Text = `Commands:
 					/this: show safe vault info
-					/link: link a safe vault to the channel
-					/setup: link your wallet address to your telegram account
-					/remove: unlink your wallet address from your telegram account
-					/queue: show pending safe vault transactions
+					/setup: sync a safe vault to this channel
+					/link:  link your wallet address to your telegram account
+					/unlink: unlink your wallet address from your telegram account
 					/balance: check safe vault token balances
-					/request amount $TOKEN: creates a TRANSFER transaction for requester, e.g. /request 1 $eth
-					/leaderboard: show leader board information
+					/queue: show pending safe vault transactions
+					/request: request funds from safe vault (e.g. /request 1 $matic)
+					/leaderboard: show safe vault owners leaderboard
 			`
 		case "this":
 			chatId := update.Message.Chat.ID
@@ -169,7 +169,7 @@ func main() {
 				),
 			)
 			msg.ReplyMarkup = safeButton
-		case "setup":
+		case "link":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			// Message of Direct Message
@@ -202,7 +202,7 @@ func main() {
 			e.Offset = 2
 			e.Length = 16
 			msg.Entities = append(msg.Entities, e)
-		case "link":
+		case "setup":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, true)
 			// Message of Direct Message
@@ -241,7 +241,7 @@ func main() {
 				json.Unmarshal(resp.Body(), &rsp)
 				msg.Text = rsp.Choices[0].Text
 			}
-		case "remove":
+		case "unlink":
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			if !signMessage.IsVerified {
 				msg.Text = fmt.Sprintf("You have not verified the message. Please send /setup@%v", bot.Self.UserName)
