@@ -114,7 +114,6 @@ func (requestHandler *RequestHandler) CreateRequest(args string) (string, string
 		requestHandler.currency,
 		requestHandler.chat.ChatId,
 	)
-	//response += fmt.Sprintf("\n\n[✍️ Submit it!](%v)", link)
 	return response, link
 
 }

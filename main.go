@@ -256,7 +256,6 @@ func main() {
 			)
 			msg.ReplyMarkup = startButton
 			msg.Text = m
-
 			msg.ParseMode = "Markdown"
 		default:
 			msg.Text = "I don't know that command"
