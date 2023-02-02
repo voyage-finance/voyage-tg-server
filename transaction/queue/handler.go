@@ -16,16 +16,16 @@ func (handler *QueuedHandler) HandleTransfer(transfer common2.TxInfo, nonce int6
 	case TransferTypeNative:
 		tokenValue := handler.s.ParseBalance(transfer.TransferInfo.Value, 18)
 		tokenCurrency := handler.Currency
-		value = fmt.Sprintf("Transfer %v `$%v`", tokenValue, tokenCurrency)
+		value = fmt.Sprintf("Transfer %v `$%s`", tokenValue, tokenCurrency)
 	case TransferTypeERC20:
 		tokenValue := handler.s.ParseBalance(transfer.TransferInfo.Value, transfer.TransferInfo.Decimals)
 		tokenCurrency := transfer.TransferInfo.TokenSymbol
-		value = fmt.Sprintf("Transfer %v `$%v`", tokenValue, tokenCurrency)
+		value = fmt.Sprintf("Transfer %v `$%s`", tokenValue, tokenCurrency)
 	case TransferTypeERC721:
-		value = fmt.Sprintf("Transfer %v `#%v`", transfer.TransferInfo.TokenSymbol, transfer.TransferInfo.TokenId)
+		value = fmt.Sprintf("Transfer %v `#%s`", transfer.TransferInfo.TokenSymbol, transfer.TransferInfo.TokenId)
 	}
 
-	value += fmt.Sprintf(" (nonce=`%v`):\n\n", nonce)
+	value += fmt.Sprintf(" (nonce=`%v`)\n\n", nonce)
 	value += fmt.Sprintf("*To*: `%v`\n\n", transfer.Recipient.Value)
 	return value
 }

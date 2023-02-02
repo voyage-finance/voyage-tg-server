@@ -99,7 +99,7 @@ func (requestHandler *RequestHandler) CreateRequest(args string) (string, string
 	if errMsg != "" {
 		return errMsg, ""
 	}
-	response := fmt.Sprintf("🙏 New Request!\n\n")
+	response := fmt.Sprintf("🙏 *New Request!*\n\n")
 	response += fmt.Sprintf("Transfer %v $%v\n\n", requestHandler.amount, strings.ToUpper(requestHandler.currency))
 	response += fmt.Sprintf("To: `%v`\n\n", requestHandler.to)
 	response += fmt.Sprintf("*Need %v submission(s) from:*\n", requestHandler.GetThreshold())
