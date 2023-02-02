@@ -63,7 +63,7 @@ func (h *HistoryHandler) Handle(id int64) string {
 	if updatedNonce != 0 {
 		h.s.UpdateLastConfirmedNonce(id, updatedNonce)
 	}
-	ret := fmt.Sprintf("🏆 Leaderboard\n\n")
+	ret := fmt.Sprintf("🏆 *Leaderboard*\n\n")
 
 	// check after updating
 	updateChat := h.s.QueryChat(id)
