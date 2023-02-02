@@ -130,7 +130,7 @@ func (handler *QueuedHandler) HandleConfirmations(id string, confirmationsRequir
 
 func (handler *QueuedHandler) GenerateSignLinkEmbedded(id string) string {
 	link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", handler.Chain, common.HexToAddress(handler.SafeAddress), id)
-	return fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n\n----------\n", link)
+	return fmt.Sprintf("\n[✍️ Sign/Submit it!](%v)\n\n----------\n", link)
 }
 
 func (handler *QueuedHandler) GenerateSignLink(id string) string {
