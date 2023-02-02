@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/voyage-finance/voyage-tg-server/models"
+	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 	"log"
 	"strconv"
@@ -31,6 +32,7 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 		return "Please init first"
 	}
 	address = strings.ToLower(address)
+	// 1.0 get signers
 	var signers []models.Signer
 	if chat.Signers != "" {
 		err := json.Unmarshal([]byte(chat.Signers), &signers)
@@ -40,12 +42,33 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 		}
 	}
 
-	for _, s := range signers {
-		if s.Address == address {
+	// 2.0 Find whether user is owner or not
+	owners := s.Status(id) // lowered in slice
+	isSigner := false
+	if slices.Contains(owners, address) {
+		isSigner = true
+	}
+
+	isNewSigner := true
+	for i, signer := range signers {
+		if signer.Address == address {
+			if signer.IsSigner != isSigner {
+				// 2.1 if signer exists but ownership was changed
+				signer.IsSigner = isSigner
+				signers[i] = signer
+				isNewSigner = false
+				log.Printf("+ %v has different ownership %v", name, isSigner)
+				break
+			}
+			log.Printf("- %v does not changed!", name)
 			return ""
 		}
 	}
-	signers = append(signers, models.Signer{Name: name, Address: address})
+	if isNewSigner {
+		// 3.0 Add a signer only if signer is new
+		log.Printf("+ %v is New!", name)
+		signers = append(signers, models.Signer{Name: name, Address: address, IsSigner: isSigner})
+	}
 	signerStr, err := json.Marshal(signers)
 	if err != nil {
 		return "Marshal signers faled"
