@@ -144,11 +144,11 @@ func main() {
 			)
 			msg.ReplyMarkup = safeButton
 			msg.ParseMode = "Markdown"
-		case "link":
+		case "setup":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			// Message of Direct Message
-			s.SendLinkButton(bot, update, signMessage)
+			s.SendVerifyButton(bot, update, signMessage)
 
 			// Message to reply in chat. Adding conversation start button, in case if user does not have conversation with bot
 			msg.Text = fmt.Sprintf("Please verify, @%v, your account address via Sign-In With Ethereum. "+
@@ -177,7 +177,7 @@ func main() {
 			e.Offset = 2
 			e.Length = 16
 			msg.Entities = append(msg.Entities, e)
-		case "setup":
+		case "link":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, true)
 			// Message of Direct Message
