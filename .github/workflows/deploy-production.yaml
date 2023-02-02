@@ -1,9 +1,9 @@
-name: Deploy Staging
+name: Deploy Production
 
 on:
   push:
     branches:
-      - dev
+      - main
 
 jobs:
   deploy:
@@ -20,6 +20,6 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           script: |
-            cd voyage/bot_server
+            cd voyage/bot_server_production
             git pull
-            make run_bundler_staging_daemon
+            make run_bundler_production_daemon
