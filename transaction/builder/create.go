@@ -7,6 +7,7 @@ import (
 	"github.com/voyage-finance/voyage-tg-server/service"
 	"golang.org/x/exp/slices"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -71,7 +72,8 @@ func (createHandler *CreateHandler) SendCreateDM() string {
 
 	dmMsg := tgbotapi.NewMessage(createHandler.update.Message.From.ID, dmText)
 
-	link := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/safes/%v:%v/transactions/create?&chatId=%v",
+	link := fmt.Sprintf("%v/safes/%v:%v/transactions/create?&chatId=%v",
+		os.Getenv("FRONT_URL"),
 		createHandler.chat.Chain,
 		createHandler.chat.SafeAddress,
 		createHandler.chat.ChatId,
