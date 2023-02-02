@@ -122,18 +122,6 @@ func main() {
 				fmt.Sprintf("Chat %v", unsignedMessage.ChatID)
 				s.SendVerifyButton(bot, update, unsignedMessage)
 			}
-		case "help":
-			log.Printf("Chat id: %d\n", update.Message.Chat.ID)
-			msg.Text = `Commands:
-					/this: show safe vault info
-					/setup: sync a safe vault to this channel
-					/link:  link your wallet address to your telegram account
-					/unlink: unlink your wallet address from your telegram account
-					/balance: check safe vault token balances
-					/queue: show pending safe vault transactions
-					/request: request funds from safe vault (e.g. /request 1 $matic)
-					/leaderboard: show safe vault owners leaderboard
-			`
 		case "this":
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
@@ -240,27 +228,6 @@ func main() {
 			)
 			msg.ReplyMarkup = startButton
 			msg.ParseMode = "Markdown"
-		case "ai":
-			args := update.Message.CommandArguments()
-			var request models.AIRequest
-			request.Model = "text-davinci-003"
-			request.Prompt = args
-			request.Temperature = 0
-			request.MaxTokens = 1000
-
-			rs, _ := json.Marshal(request)
-			resp, err := s.Client.R().
-				SetHeader("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_TOKEN"))).
-				SetHeader("Content-Type", "application/json").
-				SetBody(string(rs)).
-				Post("https://api.openai.com/v1/completions")
-			if err != nil {
-				msg.Text = err.Error()
-			} else {
-				var rsp models.AIResponse
-				json.Unmarshal(resp.Body(), &rsp)
-				msg.Text = rsp.Choices[0].Text
-			}
 		case "unlink":
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			if !signMessage.IsVerified {
