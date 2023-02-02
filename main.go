@@ -95,7 +95,27 @@ func main() {
 		// Extract the command from the Message.
 		switch update.Message.Command() {
 		case "start":
-			msg.Text = `Welcome to Voyage Safe bot! To get more information please send /help`
+			msg.ParseMode = "Markdown"
+			startMessage := fmt.Sprintf("Welcome to the Voyage Safe Telegram bot!\n\n")
+			startMessage += fmt.Sprintf("%s https://twitter.com/voyageOS\n\n", "*Twitter:*")
+			startMessage += fmt.Sprintf("*Basic Commands\n*")
+			startMessage += fmt.Sprintf("/this - Show safe vault info\n")
+			startMessage += fmt.Sprintf("/setup - Sync a safe vault to this channel\n")
+			startMessage += fmt.Sprintf("/link - Link your wallet address to your telegram account\n")
+			startMessage += fmt.Sprintf("/unlink - unlink your wallet address from your telegram account\n")
+			startMessage += fmt.Sprintf("/balance - check safe vault token balances\n")
+			startMessage += fmt.Sprintf("/queue - show pending safe vault transactions\n")
+			startMessage += fmt.Sprintf("/create - create a new safe vault transaction\n")
+			startMessage += fmt.Sprintf("/request <amount> <token> - request funds from safe vault\n")
+			startMessage += fmt.Sprintf("/leaderboard - show safe vault owners leaderboard\n\n")
+			startMessage += fmt.Sprintf("You can add this bot to any group or use the commands above in this chat.\n\n")
+			msg.Text = startMessage
+			startButton := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("Click here to add to a group", os.Getenv("SELF_INVITE")),
+				),
+			)
+			msg.ReplyMarkup = startButton
 			var unsignedMessages []models.SignMessage
 			db.Where("user_id = ? AND is_verified = false", update.Message.From.ID).Find(&unsignedMessages)
 			for _, unsignedMessage := range unsignedMessages {
