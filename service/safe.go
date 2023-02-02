@@ -349,3 +349,11 @@ func (s *Service) GetChainId(chain string) int {
 	}
 	return 1
 }
+
+func (s *Service) GetSafeChain(chainId int) string {
+	switch chainId {
+	case 137:
+		return "matic"
+	}
+	return "eth"
+}
