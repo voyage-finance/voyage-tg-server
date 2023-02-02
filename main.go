@@ -214,6 +214,25 @@ func main() {
 			msg.ReplyMarkup = startButton
 			msg.Text = m
 			msg.ParseMode = "Markdown"
+		case "create":
+			requestHandler := builder.NewCreateHandler(bot, update, update.Message.Chat.ID, s, update.Message.From.UserName)
+			err := requestHandler.SendCreateDM()
+			if err != "" {
+				msg.Text = err
+			} else {
+				// Message to reply in chat. Adding conversation start button, in case if user does not have conversation with bot
+				msg.Text = fmt.Sprintf("The transaction creation link was sent to Direct Message, *@%v*. If you do not see any message, then click the button below", update.Message.From.UserName)
+				msg.ReplyToMessageID = update.Message.MessageID
+				startButtonLink := fmt.Sprintf("https://t.me/%v", bot.Self.UserName)
+				startButton := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonURL("Start conversation", startButtonLink),
+					),
+				)
+				msg.ReplyMarkup = startButton
+				msg.ParseMode = "Markdown"
+			}
+
 		default:
 			msg.Text = "I don't know that command"
 		}
