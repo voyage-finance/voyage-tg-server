@@ -248,7 +248,15 @@ func main() {
 		case "request":
 			requestHandler := builder.NewRequestHandler(update.Message.Chat.ID, s, update.Message.From.UserName)
 			args := update.Message.CommandArguments()
-			msg.Text = requestHandler.CreateRequest(args)
+			m, link := requestHandler.CreateRequest(args)
+			startButton := tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonURL("✍️ Submit it!", link),
+				),
+			)
+			msg.ReplyMarkup = startButton
+			msg.Text = m
+
 			msg.ParseMode = "Markdown"
 		default:
 			msg.Text = "I don't know that command"

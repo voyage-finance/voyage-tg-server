@@ -84,20 +84,20 @@ func (requestHandler *RequestHandler) GetThreshold() int64 {
 	return requestHandler.s.QuerySafeData(requestHandler.chat).Threshold
 }
 
-func (requestHandler *RequestHandler) CreateRequest(args string) string {
+func (requestHandler *RequestHandler) CreateRequest(args string) (string, string) {
 	errMsg := requestHandler.ValidateArgs(args)
 	if errMsg != "" {
-		return errMsg
+		return errMsg, ""
 	}
 	// 2.0 validate whether user setup account to address
 	errMsg = requestHandler.ValidateSetup()
 	if errMsg != "" {
-		return errMsg
+		return errMsg, ""
 	}
 	// 3.0 validate user request
 	errMsg = requestHandler.ValidateBalance()
 	if errMsg != "" {
-		return errMsg
+		return errMsg, ""
 	}
 	response := fmt.Sprintf("🙏 New Request!\n\n")
 	response += fmt.Sprintf("Transfer %v $%v\n\n", requestHandler.amount, strings.ToUpper(requestHandler.currency))
@@ -114,7 +114,7 @@ func (requestHandler *RequestHandler) CreateRequest(args string) string {
 		requestHandler.currency,
 		requestHandler.chat.ChatId,
 	)
-	response += fmt.Sprintf("\n\n[✍️ Submit it!](%v)", link)
-	return response
+	//response += fmt.Sprintf("\n\n[✍️ Submit it!](%v)", link)
+	return response, link
 
 }
