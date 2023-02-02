@@ -74,7 +74,7 @@ func NotifyRequestSign(s service.Service, serverBot *ServerBot) http.HandlerFunc
 			json.NewEncoder(rw).Encode("Error in Transaction parse")
 			return
 		}
-		response = "🔔*New Transaction Alert*: \n\n" + response
+		response = "🔔 *New Transaction Alert!* \n\n" + response
 
 		isSent := serverBot.SendBotMessage(response, link, chatIdInt)
 
