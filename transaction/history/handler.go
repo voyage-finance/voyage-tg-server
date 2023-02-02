@@ -8,6 +8,7 @@ import (
 	"github.com/voyage-finance/voyage-tg-server/service"
 	common2 "github.com/voyage-finance/voyage-tg-server/transaction/common"
 	"log"
+	"sort"
 )
 
 type HistoryHandler struct {
@@ -74,6 +75,7 @@ func (h *HistoryHandler) Handle(id int64) string {
 			return "Get current signer failed"
 		}
 	}
+	sort.Sort(models.ByPoints(signers))
 	for i, s := range signers {
 		point := fmt.Sprintf("%d. *%s* - %d points\n", i+1, s.Name, s.Points)
 		ret += point

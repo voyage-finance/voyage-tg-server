@@ -18,6 +18,12 @@ type Signer struct {
 	Points  int64  `json:"points"`
 }
 
+type ByPoints []Signer
+
+func (a ByPoints) Len() int           { return len(a) }
+func (a ByPoints) Less(i, j int) bool { return a[i].Points > a[j].Points }
+func (a ByPoints) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+
 type PendingVerification struct {
 	Message string `json:"message"`
 	ChatId  string `json:"chat_id"`
