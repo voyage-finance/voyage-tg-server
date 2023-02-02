@@ -11,6 +11,7 @@ import (
 	"github.com/thedevsaddam/govalidator"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
+	"github.com/voyage-finance/voyage-tg-server/service/one_time_scipts"
 	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 	"log"
@@ -156,12 +157,7 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 		}
 
 		// 5.0 check whether signing address exists in Safe UI
-		owners := s.Status(signMessage.ChatID)                 // lowered in slice
 		addr := strings.ToLower(message.GetAddress().String()) // lowered addr
-		if !slices.Contains(owners, addr) {
-			ReturnHttpBadResponse(rw, fmt.Sprintf("This is not owner %v", addr))
-			return
-		}
 
 		response = s.AddSigner(signMessage.ChatID, user.UserName, addr)
 		if response == "" {
@@ -254,6 +250,7 @@ func LinkSafe(s service.Service) http.HandlerFunc {
 			return
 		}
 
+		one_time_scipts.UpdateChatSignersOwnership(s, *chat)
 		response = s.AddSigner(signMessage.ChatID, user.UserName, addr)
 		if response == "" {
 			response = fmt.Sprintf("Added signer, address: %s", addr)

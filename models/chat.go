@@ -13,9 +13,10 @@ type Chat struct {
 }
 
 type Signer struct {
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Points  int64  `json:"points"`
+	Name     string `json:"name"`
+	Address  string `json:"address"`
+	IsSigner bool   `json:"is_signer"`
+	Points   int64  `json:"points"`
 }
 
 type ByPoints []Signer

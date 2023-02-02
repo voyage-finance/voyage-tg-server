@@ -3,24 +3,21 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-resty/resty/v2"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/voyage-finance/voyage-tg-server/config"
 	"github.com/voyage-finance/voyage-tg-server/http_server"
+	"github.com/voyage-finance/voyage-tg-server/models"
+	"github.com/voyage-finance/voyage-tg-server/service"
 	"github.com/voyage-finance/voyage-tg-server/transaction/builder"
 	"github.com/voyage-finance/voyage-tg-server/transaction/history"
 	"github.com/voyage-finance/voyage-tg-server/transaction/queue"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 	"os"
 	"strings"
-	"unicode/utf16"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/voyage-finance/voyage-tg-server/config"
-	"github.com/voyage-finance/voyage-tg-server/models"
-	"github.com/voyage-finance/voyage-tg-server/service"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func main() {
@@ -61,7 +58,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	tokenInfo := make(map[string]service.TokenInfo)
 	for _, t := range ts {
 		tokenInfo[strings.ToLower(t.TokenAddress)] = t
@@ -125,63 +121,34 @@ func main() {
 		case "this":
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
-			s1 := "🔓 Safe address\n"
-			msg.Text = s1
-			log.Println(chat)
-			// 1. Safe address should be bold
-			var e1 tgbotapi.MessageEntity
-			e1.Type = "bold"
-			e1.Offset = 0
-			e1.Length = len(utf16.Encode([]rune(s1)))
-			msg.Entities = append(msg.Entities, e1)
+			msg.Text = "🔓 *Safe address*\n"
+			msg.Text += fmt.Sprintf("\n`%s:%s`\n", chat.Chain, chat.SafeAddress)
 
-			addr := common.HexToAddress(chat.SafeAddress)
-			s2 := fmt.Sprintf("\n%s:%s\n", chat.Chain, addr.Hex())
-			var e2 tgbotapi.MessageEntity
-			e2.Type = "code"
-			e2.Offset = len(utf16.Encode([]rune(s1)))
-			e2.Length = len(utf16.Encode([]rune(s2)))
-			e2.URL = fmt.Sprintf("https://app.safe.global/%s:%s/home", chat.Chain, addr.Hex())
-			msg.Entities = append(msg.Entities, e2)
-			msg.Text += s2
+			owners := s.Status(chatId)
+			signerUsernames := s.GetOwnerUsernames(chat)
 
-			s3 := "\n🔑 Owners\n"
-			var e3 tgbotapi.MessageEntity
-			e3.Type = "bold"
-			e3.Offset = len(utf16.Encode([]rune(s1 + s2)))
-			e3.Length = len(utf16.Encode([]rune(s3)))
-			msg.Entities = append(msg.Entities, e3)
-			msg.Text += s3
+			msg.Text += fmt.Sprintf("\n🔑 %v Owner(s)\n", len(owners))
 
-			startOffset := len(utf16.Encode([]rune(msg.Text)))
-
-			var ss []models.Signer
-			_ = json.Unmarshal([]byte(chat.Signers), &ss)
-			for i, s := range ss {
-				n := fmt.Sprintf("\n%d. @%s - ", i+1, s.Name)
-				msg.Text += n
-				a := fmt.Sprintf("%s\n", s.Address)
-				var e tgbotapi.MessageEntity
-				e.Type = "code"
-				e.Offset = startOffset + len(utf16.Encode([]rune(n)))
-				e.Length = len(utf16.Encode([]rune(a)))
-				msg.Entities = append(msg.Entities, e)
-				msg.Text += a
-				startOffset += len(utf16.Encode([]rune(n)))
-				startOffset += len(utf16.Encode([]rune(a)))
+			for _, owner := range owners {
+				username, ok := signerUsernames[strings.ToLower(owner)]
+				if ok {
+					msg.Text += fmt.Sprintf("*@%v* ", username)
+				}
 			}
 
+			url := fmt.Sprintf("https://app.safe.global/%s:%s/home", chat.Chain, chat.SafeAddress)
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("Link", e2.URL),
+					tgbotapi.NewInlineKeyboardButtonURL("Link", url),
 				),
 			)
 			msg.ReplyMarkup = safeButton
+			msg.ParseMode = "Markdown"
 		case "link":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			// Message of Direct Message
-			s.SendVerifyButton(bot, update, signMessage)
+			s.SendLinkButton(bot, update, signMessage)
 
 			// Message to reply in chat. Adding conversation start button, in case if user does not have conversation with bot
 			msg.Text = fmt.Sprintf("Please verify, @%v, your account address via Sign-In With Ethereum. "+
