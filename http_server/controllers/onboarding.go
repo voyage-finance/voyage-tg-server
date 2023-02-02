@@ -235,15 +235,26 @@ func LinkSafe(s service.Service) http.HandlerFunc {
 			return
 		}
 
+		// validate chain
+		chainId := message.GetChainID()
+		chain := s.GetSafeChain(chainId)
+
 		// 5.0 save new safeAddress
 		addr := strings.ToLower(message.GetAddress().String()) // lowered addr
 		chat := s.QueryChat(signMessage.ChatID)
+		// 5.1 update chat if safeAddress is updated
 		if chat.SafeAddress != linkSafeSerializer.SafeAddress {
 			chat.SafeAddress = linkSafeSerializer.SafeAddress
+			chat.Chain = chain
+			s.DB.Save(chat)
+		}
+		// 5.2 have up-to-date chain info
+		if chat.Chain != chain {
+			chat.Chain = chain
 			s.DB.Save(chat)
 		}
 
-		// 5.1 check whether signing address exists in Safe UI
+		// 5.3 check whether signing address exists in Safe UI
 		owners := s.Status(signMessage.ChatID) // lowered in slice
 		if !slices.Contains(owners, addr) {
 			ReturnHttpBadResponse(rw, fmt.Sprintf("This is not owner %v", addr))
