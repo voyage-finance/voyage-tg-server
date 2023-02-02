@@ -75,7 +75,7 @@ func (h *HistoryHandler) Handle(id int64) string {
 		}
 	}
 	for i, s := range signers {
-		point := fmt.Sprintf("%d. %s - %d points\n", i+1, s.Name, s.Points)
+		point := fmt.Sprintf("%d. *%s* - %d points\n", i+1, s.Name, s.Points)
 		ret += point
 	}
 	return ret
