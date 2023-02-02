@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/thedevsaddam/govalidator"
 	"github.com/voyage-finance/voyage-tg-server/service"
-	"github.com/voyage-finance/voyage-tg-server/transaction"
+	common2 "github.com/voyage-finance/voyage-tg-server/transaction/common"
 	"github.com/voyage-finance/voyage-tg-server/transaction/queue"
 	"net/http"
 	"strconv"
@@ -54,10 +54,10 @@ func NotifyRequestSign(s service.Service) http.HandlerFunc {
 			json.NewEncoder(rw).Encode(err)
 			return
 		}
-		var transactionRetrieve transaction.RetrieveTransaction
+		var transactionRetrieve common2.RetrieveTransaction
 		json.Unmarshal(resp.Body(), &transactionRetrieve)
 
-		tx := transaction.Transaction{
+		tx := common2.Transaction{
 			Id:            transactionRetrieve.Id,
 			Timestamp:     transactionRetrieve.Timestamp,
 			TxStatus:      transactionRetrieve.TxStatus,

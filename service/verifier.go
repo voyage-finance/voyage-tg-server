@@ -2,11 +2,13 @@ package service
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
@@ -31,6 +33,34 @@ type Service struct {
 	Client    *resty.Client
 	EthClient *ethclient.Client
 	Tokens    map[string]TokenInfo
+}
+
+func (s *Service) UpdatePoints(id int64, addr string, point int64) {
+	chat := s.QueryChat(id)
+	var signers []models.Signer
+	var updatedSigners []models.Signer
+	json.Unmarshal([]byte(chat.Signers), &signers)
+	for _, signer := range signers {
+		if strings.ToLower(signer.Address) == strings.ToLower(addr) {
+			signer.Points += point
+		}
+		updatedSigners = append(updatedSigners, signer)
+	}
+
+	signerStr, _ := json.Marshal(updatedSigners)
+
+	s.DB.Model(&chat).Where("chat_id = ?", id).Update("Signers", signerStr)
+
+}
+
+func (s *Service) UpdateLastConfirmedNonce(id int64, nonce int64) {
+	chat := s.QueryChat(id)
+	s.DB.Model(&chat).Where("chat_id = ?", id).Update("LastConfirmNonce", nonce)
+}
+
+func (s *Service) GetCurrentLastConfirmedNonce(id int64) int64 {
+	chat := s.QueryChat(id)
+	return chat.LastConfirmNonce
 }
 
 func (s *Service) GenerateMessage(n int) string {

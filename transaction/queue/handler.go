@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/voyage-finance/voyage-tg-server/transaction"
+	common2 "github.com/voyage-finance/voyage-tg-server/transaction/common"
 	"log"
 	"strings"
 )
 
-func (handler *QueuedHandler) HandleTransfer(transfer transaction.TxInfo, nonce int64) string {
+func (handler *QueuedHandler) HandleTransfer(transfer common2.TxInfo, nonce int64) string {
 	value := ""
 
 	switch transfer.TransferInfo.Type {
@@ -36,7 +36,7 @@ func (handler *QueuedHandler) ResetConflictProgress() {
 	handler.ConflictTransaction = nil
 }
 
-func (handler *QueuedHandler) HandleCustom(custom transaction.Transaction) string {
+func (handler *QueuedHandler) HandleCustom(custom common2.Transaction) string {
 	value := ""
 
 	if custom.IsCancellation {
@@ -56,7 +56,7 @@ func (handler *QueuedHandler) HandleCustom(custom transaction.Transaction) strin
 	return value
 }
 
-func (handler *QueuedHandler) HandleSettingsChange(settingChange transaction.TxInfo) string {
+func (handler *QueuedHandler) HandleSettingsChange(settingChange common2.TxInfo) string {
 	value := ""
 	switch settingChange.SettingsInfo.Type {
 	case ChangeThreshold:
@@ -75,7 +75,7 @@ func (handler *QueuedHandler) HandleConfirmations(id string, confirmationsRequir
 	resp, err := handler.s.Client.R().EnableTrace().Get(txRetrieveURL)
 	confirmationResult := ""
 	if err == nil {
-		var eachTransactionResponse transaction.EachTransactionResponse
+		var eachTransactionResponse common2.EachTransactionResponse
 		json.Unmarshal(resp.Body(), &eachTransactionResponse)
 		allSigners := map[string]string{}
 		// run through signers of tx and store their usernames
@@ -133,7 +133,7 @@ func (handler *QueuedHandler) GenerateSignLink(id string) string {
 	return fmt.Sprintf("[✍️ Sign/Submit it!](%v)\n\n----------\n", link)
 }
 
-func (handler *QueuedHandler) HandleTransaction(transaction transaction.Transaction) (string, bool) {
+func (handler *QueuedHandler) HandleTransaction(transaction common2.Transaction) (string, bool) {
 	value := ""
 	switch transaction.TxInfo.Type {
 	case TransactionTypeTransfer:
@@ -152,7 +152,7 @@ func (handler *QueuedHandler) HandleTransaction(transaction transaction.Transact
 	return value, true
 }
 
-func (handler *QueuedHandler) ResolveConflictType(transaction transaction.Transaction, conflictType string) *transaction.Transaction {
+func (handler *QueuedHandler) ResolveConflictType(transaction common2.Transaction, conflictType string) *common2.Transaction {
 	// we need to store a transaction of Reject to show its content: owners, conflictCount, Nonce ....
 	// if end of conflict, then return rejection tx data
 	handler.ConflictCount++
@@ -194,7 +194,7 @@ func (handler *QueuedHandler) Handle(id int64) string {
 	if err != nil {
 		return err.Error()
 	}
-	var queueTransactionResponse QueuedTransactionResponse
+	var queueTransactionResponse common2.TransactionResponse
 	json.Unmarshal(resp.Body(), &queueTransactionResponse)
 
 	returnResponse := ""

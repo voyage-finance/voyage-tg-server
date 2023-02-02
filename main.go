@@ -6,6 +6,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/voyage-finance/voyage-tg-server/http_server"
 	"github.com/voyage-finance/voyage-tg-server/transaction/builder"
+	"github.com/voyage-finance/voyage-tg-server/transaction/history"
 	"github.com/voyage-finance/voyage-tg-server/transaction/queue"
 	"log"
 	"os"
@@ -84,9 +85,6 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	// n := service.Notification{Bot: bot, S: &s}
-	// go n.Start()
-
 	for update := range updates {
 		if update.Message == nil { // ignore non-Message updates
 			continue
@@ -114,6 +112,7 @@ func main() {
 					/queue: show pending safe vault transactions
 					/balance: check safe vault token balances
 					/request amount $TOKEN: creates a TRANSFER transaction for requester, e.g. /request 1 $eth
+					/leaderboard: show leader board information
 			`
 		case "this":
 			chatId := update.Message.Chat.ID
@@ -190,6 +189,10 @@ func main() {
 		case "queue":
 			queueHandler := queue.NewQueuedHandler(s)
 			msg.Text = queueHandler.Handle(update.Message.Chat.ID)
+			msg.ParseMode = "Markdown"
+		case "leaderboard":
+			historyHandler := history.NewQueuedHandler(s)
+			msg.Text = historyHandler.Handle(update.Message.Chat.ID)
 			msg.ParseMode = "Markdown"
 		case "balance":
 			chatId := update.Message.Chat.ID
