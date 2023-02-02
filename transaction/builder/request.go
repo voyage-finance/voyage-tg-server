@@ -5,6 +5,7 @@ import (
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -106,7 +107,8 @@ func (requestHandler *RequestHandler) CreateRequest(args string) (string, string
 	for _, username := range requestHandler.ownersMap {
 		response += fmt.Sprintf("*@%v* ", username)
 	}
-	link := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/safes/%v:%v/transactions/create/send?amount=%v&to=%v&currency=%v&chatId=%v",
+	link := fmt.Sprintf("%v/safes/%v:%v/transactions/create/send?amount=%v&to=%v&currency=%v&chatId=%v",
+		os.Getenv("FRONT_URL"),
 		requestHandler.chat.Chain,
 		requestHandler.chat.SafeAddress,
 		requestHandler.amount,

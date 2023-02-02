@@ -8,6 +8,7 @@ import (
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"log"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -89,7 +90,7 @@ func (s *Service) RecoveryAddress(message []byte, signature []byte) string {
 }
 
 func (s *Service) SendVerifyButton(bot *tgbotapi.BotAPI, update tgbotapi.Update, signMessage models.SignMessage) {
-	r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/sign?message=%s&name=%s&msg_id=%v", signMessage.Message, update.Message.From.String(), signMessage.ID)
+	r := fmt.Sprintf("%v/sign?message=%s&name=%s&msg_id=%v", os.Getenv("FRONT_URL"), signMessage.Message, update.Message.From.String(), signMessage.ID)
 	var safeButton = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL("Link", r),
@@ -115,7 +116,7 @@ func (s *Service) SendVerifyButton(bot *tgbotapi.BotAPI, update tgbotapi.Update,
 
 func (s *Service) SendLinkButton(bot *tgbotapi.BotAPI, update tgbotapi.Update, signMessage models.SignMessage) {
 	// here we can validate whether user is admin or not
-	r := fmt.Sprintf("https://telegram-bot-ui-two.vercel.app/link?message=%s&name=%s&msg_id=%v", signMessage.Message, update.Message.From.String(), signMessage.ID)
+	r := fmt.Sprintf("%v/link?message=%s&name=%s&msg_id=%v", os.Getenv("FRONT_URL"), signMessage.Message, update.Message.From.String(), signMessage.ID)
 	var safeButton = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL("Choose Safe", r),
