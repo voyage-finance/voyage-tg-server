@@ -59,7 +59,7 @@ func (requestHandler *RequestHandler) ValidateSetup() string {
 		}
 	}
 	if toAddress == "" {
-		return "You did not setup your account. Please send /link"
+		return "You did not link your account. Please send /link"
 	}
 	requestHandler.to = toAddress
 	return ""
