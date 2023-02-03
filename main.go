@@ -127,7 +127,7 @@ func main() {
 			owners := s.Status(chatId)
 			signerUsernames := s.GetOwnerUsernames(chat)
 
-			msg.Text += fmt.Sprintf("\n🔑 %v Owner(s)\n", len(owners))
+			msg.Text += fmt.Sprintf("\n🔑 *%d Owner(s)*\n", len(owners))
 
 			for _, owner := range owners {
 				username, ok := signerUsernames[strings.ToLower(owner)]
