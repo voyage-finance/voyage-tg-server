@@ -40,7 +40,7 @@ func (createHandler *CreateHandler) ValidateSetup() string {
 		}
 	}
 	if address == "" {
-		return "You did not setup your account. Please send /setup"
+		return "You did not setup your account. Please send /link"
 	}
 	createHandler.address = address
 	return ""
