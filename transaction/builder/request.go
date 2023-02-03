@@ -81,8 +81,8 @@ func (requestHandler *RequestHandler) ValidateBalance() string {
 	return ""
 }
 
-func (requestHandler *RequestHandler) GetThreshold() int64 {
-	return requestHandler.s.QuerySafeData(requestHandler.chat).Threshold
+func (requestHandler *RequestHandler) GetThreshold() service.StatusResp {
+	return requestHandler.s.QuerySafeData(requestHandler.chat)
 }
 
 func (requestHandler *RequestHandler) CreateRequest(args string) (string, string) {
@@ -100,12 +100,16 @@ func (requestHandler *RequestHandler) CreateRequest(args string) (string, string
 	if errMsg != "" {
 		return errMsg, ""
 	}
+	threshold := requestHandler.GetThreshold()
 	response := fmt.Sprintf("🙏 *New Request!*\n\n")
 	response += fmt.Sprintf("Transfer %v $%v\n\n", requestHandler.amount, strings.ToUpper(requestHandler.currency))
 	response += fmt.Sprintf("To: `%v`\n\n", requestHandler.to)
-	response += fmt.Sprintf("*Need %v submission(s) from:*\n", requestHandler.GetThreshold())
-	for _, username := range requestHandler.ownersMap {
-		response += fmt.Sprintf("*@%v* ", username)
+	response += fmt.Sprintf("*Need %v submission(s) from:*\n", threshold.Threshold)
+	for _, addr := range threshold.Owners {
+		username, find := requestHandler.ownersMap[strings.ToLower(addr)]
+		if find {
+			response += fmt.Sprintf("*@%v* ", username)
+		}
 	}
 	link := fmt.Sprintf("%v/safes/%v:%v/transactions/create/send?amount=%v&to=%v&currency=%v&chatId=%v",
 		os.Getenv("FRONT_URL"),
