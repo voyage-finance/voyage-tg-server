@@ -206,12 +206,14 @@ func main() {
 			requestHandler := builder.NewRequestHandler(update.Message.Chat.ID, s, update.Message.From.UserName)
 			args := update.Message.CommandArguments()
 			m, link := requestHandler.CreateRequest(args)
-			startButton := tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("✍️ Submit it!", link),
-				),
-			)
-			msg.ReplyMarkup = startButton
+			if link != "" {
+				startButton := tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonURL("✍️ Submit it!", link),
+					),
+				)
+				msg.ReplyMarkup = startButton
+			}
 			msg.Text = m
 			msg.ParseMode = "Markdown"
 		case "create":
