@@ -357,3 +357,14 @@ func (s *Service) GetSafeChain(chainId int) string {
 	}
 	return "eth"
 }
+
+func (s *Service) GetAddressByUsername(chat *models.Chat, username string) string {
+	signers := s.GetOwnerUsernames(chat)
+	username = strings.ToLower(username)
+	for addr, user := range signers {
+		if user == username {
+			return addr
+		}
+	}
+	return ""
+}

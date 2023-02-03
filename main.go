@@ -117,7 +117,7 @@ func main() {
 			)
 			msg.ReplyMarkup = startButton
 			var unsignedMessages []models.SignMessage
-			db.Where("user_id = ? AND is_verified = false", update.Message.From.ID).Find(&unsignedMessages)
+			db.Where("user_id = ?", update.Message.From.ID).Find(&unsignedMessages)
 			for _, unsignedMessage := range unsignedMessages {
 				fmt.Sprintf("Chat %v", unsignedMessage.ChatID)
 				s.SendVerifyButton(bot, update, unsignedMessage)

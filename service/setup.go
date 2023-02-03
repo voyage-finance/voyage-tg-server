@@ -49,11 +49,21 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 		isSigner = true
 	}
 
+	// 2.1 check whether address is already allocated to other username
+	name = strings.ToLower(name)
+	for _, signer := range signers {
+		if signer.Address == address && signer.Name != name {
+			log.Printf(signer.Address + " is already bind to " + signer.Name)
+			return fmt.Sprintf("%v is already bind to other user", signer.Address)
+		}
+	}
+
 	isNewSigner := true
 	for i, signer := range signers {
 		if signer.Address == address {
+			// 2.1 if address already allocated for given user, do nothing
 			if signer.IsSigner != isSigner {
-				// 2.1 if signer exists but ownership was changed
+				// 2.1.1 if signer exists but ownership was changed
 				signer.IsSigner = isSigner
 				signers[i] = signer
 				isNewSigner = false
@@ -62,6 +72,14 @@ func (s *Service) AddSigner(id int64, name string, address string) string {
 			}
 			log.Printf("- %v does not changed!", name)
 			return ""
+		} else if signer.Name == name {
+			// 2.2 update to new address
+			signer.Address = address
+			signer.IsSigner = isSigner
+			signers[i] = signer
+			isNewSigner = false
+			log.Printf("+ %v changed address to %v", name, address)
+			break
 		}
 	}
 	if isNewSigner {
@@ -115,11 +133,12 @@ func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64, forceUpdate
 		message := "0x" + s.GenerateMessage(10)
 		signMessage = models.SignMessage{UserID: userId, ChatID: chatId, Message: message}
 		s.DB.Create(&signMessage)
-	} else if forceUpdate {
-		signMessage.Message = "0x" + s.GenerateMessage(10)
-		//signMessage.IsVerified = false
-		s.DB.Save(&signMessage)
 	}
+	//else if forceUpdate {
+	//	signMessage.Message = "0x" + s.GenerateMessage(10)
+	//	//signMessage.IsVerified = false
+	//	s.DB.Save(&signMessage)
+	//}
 	return signMessage
 }
 
