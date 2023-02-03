@@ -88,6 +88,10 @@ func main() {
 
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
 
+		if !strings.HasPrefix(update.Message.Text, "/") {
+			continue
+		}
+
 		// Extract the command from the Message.
 		switch update.Message.Command() {
 		case "start":
