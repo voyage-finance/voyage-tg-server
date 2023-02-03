@@ -103,7 +103,7 @@ func main() {
 			startMessage += fmt.Sprintf("/queue - Show pending Safe vault transactions\n")
 			startMessage += fmt.Sprintf("/create - Create a new Safe vault transaction\n")
 			startMessage += fmt.Sprintf("/request <amount> <token> - Request funds from Safe vault\n")
-			startMessage += fmt.Sprintf("/leaderboard - Show Safe vault owners leaderboard\n")
+			startMessage += fmt.Sprintf("/leaderboard - Show Safe vault owners leaderboard\n\n")
 			startMessage += fmt.Sprintf("You can add this bot to any group or use the commands above in this chat.\n\n")
 			msg.Text = startMessage
 			startButton := tgbotapi.NewInlineKeyboardMarkup(
