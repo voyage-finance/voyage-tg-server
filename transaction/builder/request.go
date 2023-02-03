@@ -73,7 +73,7 @@ func (requestHandler *RequestHandler) ValidateBalance() string {
 	log.Println(balances, requestHandler.currency)
 	balance, ok := balances[requestHandler.currency]
 	if !ok {
-		return fmt.Sprintf("`$%v` Balance is insufficient!", requestHandler.currency)
+		return fmt.Sprintf("`$%s` balance is insufficient!", strings.ToUpper(requestHandler.currency))
 	}
 	if balance < requestHandler.amount {
 		return fmt.Sprintf("Balance is insufficient! Max is %v $%v", balance, strings.ToUpper(requestHandler.currency))
