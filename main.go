@@ -95,7 +95,7 @@ func main() {
 			startMessage := fmt.Sprintf("Welcome to the Voyage Safe Telegram bot!\n\n")
 			startMessage += fmt.Sprintf("%s https://twitter.com/voyageOS\n\n", "*Twitter:*")
 			startMessage += fmt.Sprintf("*Basic Commands\n*")
-			startMessage += fmt.Sprintf("/this - Show Safe vault info\n")
+			startMessage += fmt.Sprintf("/info - Show Safe vault info\n")
 			startMessage += fmt.Sprintf("/setup - Sync a Safe vault to this Telegram channel\n")
 			startMessage += fmt.Sprintf("/link - Link your wallet address to your Telegram account\n")
 			startMessage += fmt.Sprintf("/unlink - Unlink your wallet address from your Telegram account\n")
@@ -118,7 +118,7 @@ func main() {
 				fmt.Sprintf("Chat %v", unsignedMessage.ChatID)
 				s.SendVerifyButton(bot, update, unsignedMessage)
 			}
-		case "this":
+		case "info":
 			chatId := update.Message.Chat.ID
 			chat := s.QueryChat(chatId)
 			msg.Text = "🔓 *Safe address*\n"
@@ -178,6 +178,25 @@ func main() {
 			e.Length = 16
 			msg.Entities = append(msg.Entities, e)
 		case "setup":
+			var config tgbotapi.ChatAdministratorsConfig
+			config.ChatID = update.Message.Chat.ID
+			members, err := bot.GetChatAdministrators(config)
+			if err != nil {
+				msg.Text = err.Error()
+				goto F
+			}
+			log.Printf("Members: %v", members)
+			isAdmin := false
+			for _, m := range members {
+				if m.User.ID == update.Message.From.ID {
+					isAdmin = true
+				}
+			}
+			if !isAdmin {
+				msg.Text = "You are not an admin of this chat."
+				goto F
+			}
+
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, true)
 			// Message of Direct Message
@@ -238,7 +257,7 @@ func main() {
 		default:
 			msg.Text = "I don't know that command"
 		}
-
+	F:
 		if _, err := bot.Send(msg); err != nil {
 			log.Panic(err)
 		}
