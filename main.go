@@ -144,7 +144,7 @@ func main() {
 			)
 			msg.ReplyMarkup = safeButton
 			msg.ParseMode = "Markdown"
-		case "setup":
+		case "link":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			// Message of Direct Message
@@ -177,7 +177,7 @@ func main() {
 			e.Offset = 2
 			e.Length = 16
 			msg.Entities = append(msg.Entities, e)
-		case "link":
+		case "setup":
 			s.SetupChat(update.Message.Chat.ID, update.Message.Chat.Title, update.Message.From.ID, update.Message.From.UserName)
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, true)
 			// Message of Direct Message
@@ -198,7 +198,7 @@ func main() {
 		case "unlink":
 			signMessage := s.GetOrCreateSignMessage(update.Message.Chat.ID, update.Message.From.ID, false)
 			if !signMessage.IsVerified {
-				msg.Text = fmt.Sprintf("You have not verified the message. Please send /setup@%v", bot.Self.UserName)
+				msg.Text = fmt.Sprintf("You have not verified the message. Please send /link@%v", bot.Self.UserName)
 				break
 			}
 			msg.Text = s.RemoveSigner(signMessage, update.Message.From.UserName)
