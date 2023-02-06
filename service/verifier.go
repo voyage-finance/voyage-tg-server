@@ -96,18 +96,23 @@ func (s *Service) SendVerifyButton(bot *tgbotapi.BotAPI, update tgbotapi.Update,
 			tgbotapi.NewInlineKeyboardButtonURL("Link", r),
 		),
 	)
-	dmText := "Please verify, your account address via Sign-In With Ethereum"
-	if signMessage.IsVerified {
-		dmText = "You have already verified the account address via Sign-In With Ethereum"
-	}
+
 	var chat models.Chat
 	s.DB.First(&chat, "chat_id = ?", signMessage.ChatID)
 	if !chat.Init {
 		log.Println("SendVerifyButton error: chat does not exist")
 		return
 	}
+
+	dmText := "Please verify, your account address via Sign-In With Ethereum"
+	if signMessage.IsVerified {
+		//dmText += "You have already verified the account address via Sign-In With Ethereum"
+		dmText += fmt.Sprintf(". Your current bind address=`%v`", s.GetAddressByUsername(&chat, update.Message.From.String()))
+	}
+
 	dmText += fmt.Sprintf(". Chat: `%v`", chat.Title)
 	dmMsg := tgbotapi.NewMessage(update.Message.From.ID, dmText)
+	dmMsg.ParseMode = "Markdown"
 	dmMsg.ReplyMarkup = safeButton
 	if _, err := bot.Send(dmMsg); err != nil {
 		log.Println(err)
