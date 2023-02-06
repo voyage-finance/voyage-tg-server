@@ -43,7 +43,9 @@ func main() {
 	// Migrate the schema
 	//db.AutoMigrate(&models.User{})
 	//db.AutoMigrate(&models.Chat{})
-	//db.AutoMigrate(&models.SignMessage{})
+
+	//db.AutoMigrate(&models.User{}, &models.Chat{}, &models.Signer{})
+	//db.SetupJoinTable(&models.Chat{}, "Users", &models.Signer{})
 
 	tokens, err := os.ReadFile("tokens.json")
 	if err != nil {
@@ -64,6 +66,9 @@ func main() {
 	}
 
 	s := service.Service{DB: db, Client: client, EthClient: ethClient, Tokens: tokenInfo}
+
+	// 1 time job
+	//one_time_scripts.TransferSignersToTableInAllChats(s)
 
 	go http_server.HandleRequests(s)
 
@@ -224,7 +229,7 @@ func main() {
 				msg.Text = fmt.Sprintf("You have not verified the message. Please send /link@%v", bot.Self.UserName)
 				break
 			}
-			msg.Text = s.RemoveSigner(signMessage, update.Message.From.UserName)
+			msg.Text = s.RemoveSigner(signMessage)
 		case "request":
 			requestHandler := builder.NewRequestHandler(update.Message.Chat.ID, s, update.Message.From.UserName)
 			args := update.Message.CommandArguments()

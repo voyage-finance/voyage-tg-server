@@ -1,5 +1,9 @@
 package models
 
+import (
+	"gorm.io/gorm"
+)
+
 type Chat struct {
 	ChatId           int64  `gorm:"primaryKey;unique:true;not_null:true"`
 	Title            string `json:"title"`
@@ -10,13 +14,20 @@ type Chat struct {
 	LastConfirmNonce int64  `json:"lastConfirmNonce"`
 	Signers          string `json:"signers"`
 	SignMessages     []SignMessage
+
+	Users []*User `gorm:"many2many:signers;"`
 }
 
 type Signer struct {
-	Name     string `json:"name"`
-	Address  string `json:"address"`
-	IsSigner bool   `json:"is_signer"`
-	Points   int64  `json:"points"`
+	gorm.Model
+	ChatID   int64  `gorm:"primaryKey;column:chat_chat_id"`
+	Chat     Chat   `gorm:"references:ChatId"`
+	UserID   int64  `gorm:"primaryKey;column:user_user_id"`
+	User     User   `gorm:"references:UserId"`
+	Name     string `gorm:"column:name"` // need to be deleted in the future
+	Address  string `gorm:"column:address"`
+	IsSigner bool   `gorm:"column:is_signer"`
+	Points   int64  `gorm:"column:points"`
 }
 
 type ByPoints []Signer

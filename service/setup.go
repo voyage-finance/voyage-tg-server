@@ -1,14 +1,12 @@
 package service
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 	"log"
-	"strconv"
 	"strings"
 )
 
@@ -24,74 +22,59 @@ func (s *Service) SetupChat(id int64, title string, userId int64, userName strin
 	}
 }
 
-func (s *Service) AddSigner(id int64, name string, address string) string {
-	log.Printf("AddSigner id: %d, name: %s, address: %s\n", id, name, address)
-	var chat models.Chat
-	s.DB.First(&chat, "chat_id = ?", id)
-	if !chat.Init {
-		return "Please init first"
-	}
+func (s *Service) AddSigner(chatId int64, userId int64, address string) string {
+	log.Printf("AddSigner chatId: %v, userId: %v, address: %s\n", chatId, userId, address)
+	var signer models.Signer
 	address = strings.ToLower(address)
-	// 1.0 get signers
-	var signers []models.Signer
-	if chat.Signers != "" {
-		err := json.Unmarshal([]byte(chat.Signers), &signers)
-		if err != nil {
-			log.Printf("AddSigner failed, error: %s\n", err.Error())
-			return "Get current signer failed"
-		}
+	forceSave := false
+
+	// 1.0 Find whether user is owner or not
+	owners := s.Status(chatId) // lowered in slice
+	isSigner := slices.Contains(owners, address)
+
+	var user models.User
+	err := s.DB.First(&user, userId).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return err.Error()
 	}
 
-	// 2.0 Find whether user is owner or not
-	owners := s.Status(id) // lowered in slice
-	isSigner := false
-	if slices.Contains(owners, address) {
-		isSigner = true
+	err = s.DB.First(&signer, "user_user_id = ? AND chat_chat_id = ?", userId, chatId).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		forceSave = true
+		signer = models.Signer{ChatID: chatId, UserID: userId, Name: user.UserName, Address: address, IsSigner: isSigner}
 	}
 
-	// 2.1 check whether address is already allocated to other username
-	name = strings.ToLower(name)
-	for _, signer := range signers {
-		if signer.Address == address && signer.Name != name {
-			log.Printf(signer.Address + " is already bind to " + signer.Name)
-			return fmt.Sprintf("%v is already bind to other user", signer.Address)
-		}
+	// 1.1 check whether address is already allocated to other user in the chat
+	var checkSigner models.Signer
+	err = s.DB.First(&checkSigner, "chat_chat_id = ? AND user_user_id != ? and address = ?", chatId, userId, address).Error
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Printf(signer.Address + " is already bind to " + checkSigner.Name)
+		return fmt.Sprintf("%v is already bind to other user", checkSigner.Address)
 	}
 
-	isNewSigner := true
-	for i, signer := range signers {
+	if signer.ID != 0 {
+		// 2.0 Signer already exists in db
 		if signer.Address == address {
-			// 2.1 if address already allocated for given user, do nothing
+			// 2.0.1 if address already allocated for given user, do nothing
 			if signer.IsSigner != isSigner {
-				// 2.1.1 if signer exists but ownership was changed
+				// 2.0.2 update if isSigner changed
 				signer.IsSigner = isSigner
-				signers[i] = signer
-				isNewSigner = false
-				log.Printf("+ %v has different ownership %v", name, isSigner)
-				break
+				forceSave = true
+				log.Printf("+ %v has different ownership %v", user.UserName, isSigner)
+			} else {
+				log.Printf("- %v does not changed!", user.UserName)
 			}
-			log.Printf("- %v does not changed!", name)
-			return ""
-		} else if signer.Name == name {
-			// 2.2 update to new address
+		} else {
+			// 2.1 User changed Address to new
 			signer.Address = address
 			signer.IsSigner = isSigner
-			signers[i] = signer
-			isNewSigner = false
-			log.Printf("+ %v changed address to %v", name, address)
-			break
+			forceSave = true
 		}
 	}
-	if isNewSigner {
-		// 3.0 Add a signer only if signer is new
-		log.Printf("+ %v is New!", name)
-		signers = append(signers, models.Signer{Name: name, Address: address, IsSigner: isSigner})
+	if forceSave {
+		s.DB.Save(&signer)
+		log.Printf("+/- Signer %v was UPDATED!", signer.ID)
 	}
-	signerStr, err := json.Marshal(signers)
-	if err != nil {
-		return "Marshal signers faled"
-	}
-	s.DB.Model(&chat).Where("chat_id = ?", strconv.FormatInt(id, 10)).Update("Signers", signerStr)
 	return ""
 }
 
@@ -142,48 +125,13 @@ func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64, forceUpdate
 	return signMessage
 }
 
-func (s *Service) RemoveSigner(signMessage models.SignMessage, username string) string {
-	chatId := signMessage.ChatID
-	log.Printf("RemoveSigner - chatId: %d, username: %s\n", chatId, username)
-	// 1.0 Getting the chat
-	var chat models.Chat
-	s.DB.First(&chat, "chat_id = ?", chatId)
-	if !chat.Init {
-		return "Please init first"
-	}
-	// 1.1 taking Signer objects
-	var signers []models.Signer
-	if chat.Signers != "" {
-		err := json.Unmarshal([]byte(chat.Signers), &signers)
-		if err != nil {
-			log.Printf("RemoveSigner failed, error: %s\n", err.Error())
-			return "Get current signer failed"
-		}
-	}
+func (s *Service) RemoveSigner(signMessage models.SignMessage) string {
+	// 1.0 remove Signer from DB
+	var signer models.Signer
+	s.DB.Where("chat_chat_id = ? AND user_user_id = ?", signMessage.ChatID, signMessage.UserID).Delete(&signer)
+	log.Printf("Signers id=%v was deleted!", signer.ID)
 
-	// 2.0 finding removing address from signers slice
-	signerIndex := -1
-	address := ""
-	for i, s := range signers {
-		if s.Name == username {
-			signerIndex = i
-			address = s.Address
-			break
-		}
-	}
-
-	if signerIndex == -1 {
-		return fmt.Sprintf("Signer(%v) address does not exist in db", username)
-	}
-
-	// 2.1 remove addresss
-	signers = append(signers[:signerIndex], signers[signerIndex+1:]...)
-	signerStr, err := json.Marshal(signers)
-	if err != nil {
-		return "Marshal signers faled"
-	}
-	// 2.2. save updated signer in database
-	s.DB.Model(&chat).Where("chat_id = ?", chatId).Update("Signers", signerStr)
+	// 2.0 remove signMessage
 	s.DB.Delete(&signMessage)
-	return fmt.Sprintf("Address( %v ) was removed!", address)
+	return fmt.Sprintf("Address( %v ) was removed!", signer.Address)
 }
