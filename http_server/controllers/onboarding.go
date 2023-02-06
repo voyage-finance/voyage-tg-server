@@ -143,10 +143,10 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 			return
 		}
 
-		if signMessage.IsVerified {
-			json.NewEncoder(rw).Encode("Message already verified!")
-			return
-		}
+		//if signMessage.IsVerified {
+		//	json.NewEncoder(rw).Encode("Message already verified!")
+		//	return
+		//}
 
 		// 4.0 check user existence in db
 		var user models.User
