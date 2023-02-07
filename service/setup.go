@@ -128,8 +128,10 @@ func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64, forceUpdate
 func (s *Service) RemoveSigner(signMessage models.SignMessage) string {
 	// 1.0 remove Signer from DB
 	var signer models.Signer
+	s.DB.First(&signer, "chat_chat_id = ? AND user_user_id = ?", signMessage.ChatID, signMessage.UserID)
 	safeAddress := signer.Address
-	s.DB.Where("chat_chat_id = ? AND user_user_id = ?", signMessage.ChatID, signMessage.UserID).Delete(&signer)
+	s.DB.Delete(&signer)
+
 	log.Printf("Signers=%v was deleted!", safeAddress)
 
 	// 2.0 remove signMessage
