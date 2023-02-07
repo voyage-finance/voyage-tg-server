@@ -222,8 +222,6 @@ func LinkSafe(s service.Service) http.HandlerFunc {
 		addr := strings.ToLower(message.GetAddress().String()) // lowered addr
 		chat := s.QueryChat(signMessage.ChatID)
 		// 4.1 update chat if safeAddress is updated
-		linkSafeSerializer.SafeAddress = strings.ToLower(linkSafeSerializer.SafeAddress)
-		chat.SafeAddress = strings.ToLower(chat.SafeAddress)
 		if chat.SafeAddress != linkSafeSerializer.SafeAddress {
 			chat.SafeAddress = linkSafeSerializer.SafeAddress
 			chat.Chain = chain

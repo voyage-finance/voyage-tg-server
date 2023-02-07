@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"log"
+	"net/http"
 	"strings"
 	"unicode/utf16"
 
@@ -362,4 +363,25 @@ func (s *Service) GetAddressByUsername(chat *models.Chat, username string) strin
 		}
 	}
 	return ""
+}
+
+func PingSafe(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	pingUrl := "https://safe-client.safe.global/v1/chains"
+	res, err := http.Get(pingUrl)
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+	if err != nil {
+		msg.Text = "Safe Gnosis error: " + err.Error()
+		if _, err := bot.Send(msg); err != nil {
+			log.Println(err)
+		}
+		return
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		msg.Text = "Safe Gnosis is unavailable!"
+		if _, err := bot.Send(msg); err != nil {
+			log.Println(err)
+		}
+	}
 }
