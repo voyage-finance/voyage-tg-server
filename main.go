@@ -97,6 +97,9 @@ func main() {
 			continue
 		}
 
+		// check safe availability
+		go service.PingSafe(bot, update)
+
 		// Extract the command from the Message.
 		switch update.Message.Command() {
 		case "start":
@@ -135,6 +138,9 @@ func main() {
 
 			owners := s.Status(chatId)
 			signerUsernames := s.GetOwnerUsernames(chat)
+
+			log.Println("owners", owners)
+			log.Println("signerUsernames", signerUsernames)
 
 			msg.Text += fmt.Sprintf("\n🔑 *%d Owner(s)*\n", len(owners))
 
