@@ -128,10 +128,17 @@ func (s *Service) GetOrCreateSignMessage(chatId int64, userId int64, forceUpdate
 func (s *Service) RemoveSigner(signMessage models.SignMessage) string {
 	// 1.0 remove Signer from DB
 	var signer models.Signer
+	safeAddress := signer.Address
 	s.DB.Where("chat_chat_id = ? AND user_user_id = ?", signMessage.ChatID, signMessage.UserID).Delete(&signer)
-	log.Printf("Signers id=%v was deleted!", signer.ID)
+	log.Printf("Signers=%v was deleted!", safeAddress)
 
 	// 2.0 remove signMessage
 	s.DB.Delete(&signMessage)
-	return fmt.Sprintf("Address( %v ) was removed!", signer.Address)
+	return fmt.Sprintf("Address( %v ) was removed!", safeAddress)
+}
+
+func (s *Service) GetSignersByChat(chat *models.Chat) []models.Signer {
+	var signers []models.Signer
+	s.DB.Find(&signers, "chat_chat_id = ?", chat.ChatId)
+	return signers
 }
