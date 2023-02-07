@@ -66,15 +66,8 @@ func (h *HistoryHandler) Handle(id int64) string {
 	ret := fmt.Sprintf("🏆 *Leaderboard*\n\n")
 
 	// check after updating
-	updateChat := h.s.QueryChat(id)
-	var signers []models.Signer
-	if updateChat.Signers != "" {
-		err := json.Unmarshal([]byte(updateChat.Signers), &signers)
-		if err != nil {
-			log.Printf("RemoveSigner failed, error: %s\n", err.Error())
-			return "Get current signer failed"
-		}
-	}
+	signers := h.s.GetSignersByChat(chat)
+
 	sort.Sort(models.ByPoints(signers))
 	for i, s := range signers {
 		point := fmt.Sprintf("%d. *%s* - %d points\n", i+1, s.Name, s.Points)
