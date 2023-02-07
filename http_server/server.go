@@ -16,7 +16,7 @@ func HandleRequests(s service.Service) {
 	// creates a new instance of a mux router
 	router := mux.NewRouter().StrictSlash(true)
 	// replace http.HandleFunc with myRouter.HandleFunc
-	routes.OnboardingRoute(router, s)
+	routes.OnboardingRoute(router, s, bot)
 	routes.NotificationRoute(router, s, bot)
 
 	// server run

@@ -87,8 +87,13 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message == nil { // ignore non-Message updates
+		if update.Message == nil && update.CallbackQuery == nil { // ignore non-Message updates
 			continue
+		} else if update.Message == nil {
+			// remember to send callback data with prefix - `/`
+			update.Message = update.CallbackQuery.Message
+			update.Message.Text = update.CallbackQuery.Data
+			update.Message.From = update.CallbackQuery.From
 		}
 
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
@@ -97,11 +102,16 @@ func main() {
 			continue
 		}
 
+		command := update.Message.Command()
+		if update.CallbackQuery != nil {
+			command = update.CallbackQuery.Data[1:]
+		}
+
 		// check safe availability
 		go service.PingSafe(bot, update)
 
 		// Extract the command from the Message.
-		switch update.Message.Command() {
+		switch command {
 		case "start":
 			msg.ParseMode = "Markdown"
 			startMessage := fmt.Sprintf("Welcome to the Voyage Safe Telegram bot!\n\n")
@@ -118,12 +128,17 @@ func main() {
 			startMessage += fmt.Sprintf("/leaderboard - Show Safe vault owners leaderboard\n\n")
 			startMessage += fmt.Sprintf("You can add this bot to any group or use the commands above in this chat.\n\n")
 			msg.Text = startMessage
-			startButton := tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("Click here to add to a group", os.Getenv("SELF_INVITE")),
-				),
-			)
-			msg.ReplyMarkup = startButton
+			var button tgbotapi.InlineKeyboardMarkup
+			if msg.ChatID > 0 {
+				button = tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonURL("Click here to add to a group", os.Getenv("SELF_INVITE")),
+					),
+				)
+			} else {
+				button = service.GetHelperButtons()
+			}
+			msg.ReplyMarkup = button
 			var unsignedMessages []models.SignMessage
 			db.Where("user_id = ?", update.Message.From.ID).Find(&unsignedMessages)
 			for _, unsignedMessage := range unsignedMessages {
@@ -266,6 +281,9 @@ func main() {
 				msg.ParseMode = "Markdown"
 			}
 
+		case "help":
+			service.GetNavigationInstruction(bot, s, update.Message.Chat.ID, &msg)
+			msg.ParseMode = "Markdown"
 		default:
 			msg.Text = "I don't know that command"
 		}

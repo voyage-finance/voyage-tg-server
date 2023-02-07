@@ -76,7 +76,8 @@ func NotifyRequestSign(s service.Service, serverBot *ServerBot) http.HandlerFunc
 		}
 		response = "🔔 *New Transaction Alert!* \n\n" + response
 
-		isSent := serverBot.SendBotMessage(response, link, chatIdInt)
+		message := ConstructRequestMessage(response, link, chatIdInt)
+		isSent := serverBot.SendBotMessage(message)
 
 		json.NewEncoder(rw).Encode(isSent)
 

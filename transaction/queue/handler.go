@@ -86,21 +86,16 @@ func (handler *QueuedHandler) HandleConfirmations(id string, confirmationsRequir
 				allSigners[signerValue] += fmt.Sprintf("*@%s* ", username)
 			}
 		}
-		confirmText := fmt.Sprintf("*%v Confirmation(s):*\n", len(eachTransactionResponse.DetailedExecutionInfo.Confirmations))
 		confirmedSigners := map[string]bool{}
 		for _, confirm := range eachTransactionResponse.DetailedExecutionInfo.Confirmations {
 			signer := strings.ToLower(confirm.Signer.Value)
-			lowerSigner, ok := allSigners[signer]
-			if !ok {
-				continue
-			}
-			confirmText += fmt.Sprintf("✅ %v \n", lowerSigner)
 			confirmedSigners[signer] = true
 		}
-		confirmationResult += confirmText
 		if confirmationsSubmitted == 0 {
 			confirmationsSubmitted = uint64(len(confirmedSigners))
 		}
+
+		confirmationResult += fmt.Sprintf("*Signing threshold*: %v/%v\n", confirmationsSubmitted, confirmationsRequired)
 
 		if confirmationsRequired-confirmationsSubmitted > 0 {
 			unconfirmedText := fmt.Sprintf("\n*Need %v confirmation(s) from:*\n", confirmationsRequired-confirmationsSubmitted)
