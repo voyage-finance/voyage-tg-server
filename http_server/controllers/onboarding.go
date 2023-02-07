@@ -11,7 +11,6 @@ import (
 	"github.com/thedevsaddam/govalidator"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
-	"github.com/voyage-finance/voyage-tg-server/service/one_time_scripts"
 	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 	"log"
@@ -160,7 +159,7 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 	}
 }
 
-func LinkSafe(s service.Service) http.HandlerFunc {
+func LinkSafe(s service.Service, serverBot *ServerBot) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		// parse request body
 		var linkSafeSerializer LinkSafeSerializer
@@ -240,11 +239,15 @@ func LinkSafe(s service.Service) http.HandlerFunc {
 			return
 		}
 
-		one_time_scripts.UpdateChatSignersOwnership(s, *chat)
+		//one_time_scripts.UpdateChatSignersOwnership(s, *chat)
 		response = s.AddSigner(signMessage.ChatID, signMessage.UserID, addr)
 		if response == "" {
 			response = fmt.Sprintf("Added signer, address: %s", addr)
 		}
+
+		msg := fmt.Sprintf("The Safe=`%v` was set in this chat. Please send /link to bind personal address or send /help to know further instructions", addr)
+		tgMessage := ConstructSignupMessage(msg, chat.ChatId)
+		serverBot.SendBotMessage(tgMessage)
 
 		// 5.0 update signMessage
 		signMessage.IsVerified = true

@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/voyage-finance/voyage-tg-server/service"
 	"log"
 	"net/http"
 	"os"
@@ -29,7 +30,7 @@ func NewServerBot() *ServerBot {
 	return &ServerBot{bot}
 }
 
-func (serverBot *ServerBot) SendBotMessage(msg string, link string, chatId int64) bool {
+func ConstructRequestMessage(msg string, link string, chatId int64) tgbotapi.MessageConfig {
 	startButton := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonURL("✍️ Submit it!", link),
@@ -38,8 +39,20 @@ func (serverBot *ServerBot) SendBotMessage(msg string, link string, chatId int64
 	message := tgbotapi.NewMessage(chatId, msg)
 	message.ParseMode = "Markdown"
 	message.ReplyMarkup = startButton
+	return message
+}
+
+func ConstructSignupMessage(msg string, chatId int64) tgbotapi.MessageConfig {
+	button := service.GetHelperButtons()
+	message := tgbotapi.NewMessage(chatId, msg)
+	message.ParseMode = "Markdown"
+	message.ReplyMarkup = button
+	return message
+}
+
+func (serverBot *ServerBot) SendBotMessage(message tgbotapi.MessageConfig) bool {
 	if _, err := serverBot.bot.Send(message); err != nil {
-		log.Println(err)
+		log.Printf("SendBotMessage error: %s\n", err.Error())
 		return false
 	}
 
