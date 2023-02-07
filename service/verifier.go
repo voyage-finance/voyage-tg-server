@@ -2,7 +2,7 @@ package service
 
 import (
 	"crypto/sha256"
-	"encoding/json"
+	"errors"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/models"
@@ -36,22 +36,15 @@ type Service struct {
 	Tokens    map[string]TokenInfo
 }
 
-func (s *Service) UpdatePoints(id int64, addr string, point int64) {
-	chat := s.QueryChat(id)
-	var signers []models.Signer
-	var updatedSigners []models.Signer
-	json.Unmarshal([]byte(chat.Signers), &signers)
-	for _, signer := range signers {
-		if strings.ToLower(signer.Address) == strings.ToLower(addr) {
-			signer.Points += point
-		}
-		updatedSigners = append(updatedSigners, signer)
+func (s *Service) UpdatePoints(chatId int64, addr string, point int64) {
+	addr = strings.ToLower(addr)
+	var signer models.Signer
+	err := s.DB.First(&signer, "chat_chat_id = ? AND address = ?", chatId, addr).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return
 	}
-
-	signerStr, _ := json.Marshal(updatedSigners)
-
-	s.DB.Model(&chat).Where("chat_id = ?", id).Update("Signers", signerStr)
-
+	signer.Points += point
+	s.DB.Save(&signer)
 }
 
 func (s *Service) UpdateLastConfirmedNonce(id int64, nonce int64) {
