@@ -104,19 +104,13 @@ func main() {
 		switch update.Message.Command() {
 		case "start":
 			msg.ParseMode = "Markdown"
-			startMessage := fmt.Sprintf("Welcome to the Voyage Safe Telegram bot!\n\n")
+			startMessage := fmt.Sprintf("Welcome to the Voyage Safe bot!\n\n")
 			startMessage += fmt.Sprintf("%s https://twitter.com/voyageOS\n\n", "*Twitter:*")
-			startMessage += fmt.Sprintf("*Basic Commands\n*")
-			startMessage += fmt.Sprintf("/info - Show Safe vault info\n")
-			startMessage += fmt.Sprintf("/setup - Sync a Safe vault to this Telegram channel\n")
-			startMessage += fmt.Sprintf("/link - Link your wallet address to your Telegram account\n")
-			startMessage += fmt.Sprintf("/unlink - Unlink your wallet address from your Telegram account\n")
-			startMessage += fmt.Sprintf("/balance - Check Safe vault token balances\n")
-			startMessage += fmt.Sprintf("/queue - Show pending Safe vault transactions\n")
-			startMessage += fmt.Sprintf("/create - Create a new Safe vault transaction\n")
-			startMessage += fmt.Sprintf("/request <amount> <token> - Request funds from Safe vault\n")
-			startMessage += fmt.Sprintf("/leaderboard - Show Safe vault owners leaderboard\n\n")
-			startMessage += fmt.Sprintf("You can add this bot to any group or use the commands above in this chat.\n\n")
+			startMessage += fmt.Sprintf("*How to setup?\n\n*")
+			startMessage += fmt.Sprintf("1. Add the bot to your Telegram group with the button below;\n")
+			startMessage += fmt.Sprintf("2. Use the /setup command to link your Telegram group to your Safe vault;\n")
+			startMessage += fmt.Sprintf("3. Request your group members to /link their addresses to their Telegram accounts;\n")
+			startMessage += fmt.Sprintf("4. Use the /help command for further assistance.\n\n")
 			msg.Text = startMessage
 			startButton := tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
