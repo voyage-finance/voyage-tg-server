@@ -26,5 +26,5 @@ func Init() {
 	if err != nil {
 		log.Fatal("Error loading env files", err)
 	}
-	print("Loaded ENV variables")
+	print("Loaded ENV variables", envFile)
 }
