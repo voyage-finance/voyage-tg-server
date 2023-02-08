@@ -43,7 +43,9 @@ func main() {
 	// Migrate the schema
 	//db.AutoMigrate(&models.User{})
 	//db.AutoMigrate(&models.Chat{})
-	//db.AutoMigrate(&models.SignMessage{})
+
+	//db.AutoMigrate(&models.User{}, &models.Chat{}, &models.Signer{})
+	//db.SetupJoinTable(&models.Chat{}, "Users", &models.Signer{})
 
 	tokens, err := os.ReadFile("tokens.json")
 	if err != nil {
@@ -65,6 +67,9 @@ func main() {
 
 	s := service.Service{DB: db, Client: client, EthClient: ethClient, Tokens: tokenInfo}
 
+	// 1 time job
+	//one_time_scripts.TransferSignersToTableInAllChats(s)
+
 	go http_server.HandleRequests(s)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_KEY"))
@@ -82,8 +87,13 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message == nil { // ignore non-Message updates
+		if update.Message == nil && update.CallbackQuery == nil { // ignore non-Message updates
 			continue
+		} else if update.Message == nil {
+			// remember to send callback data with prefix - `/`
+			update.Message = update.CallbackQuery.Message
+			update.Message.Text = update.CallbackQuery.Data
+			update.Message.From = update.CallbackQuery.From
 		}
 
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
@@ -92,30 +102,37 @@ func main() {
 			continue
 		}
 
+		command := update.Message.Command()
+		if update.CallbackQuery != nil {
+			command = update.CallbackQuery.Data[1:]
+		}
+
+		// check safe availability
+		go service.PingSafe(bot, update)
+
 		// Extract the command from the Message.
-		switch update.Message.Command() {
+		switch command {
 		case "start":
 			msg.ParseMode = "Markdown"
-			startMessage := fmt.Sprintf("Welcome to the Voyage Safe Telegram bot!\n\n")
+			startMessage := fmt.Sprintf("Welcome to the Voyage Safe bot!\n\n")
 			startMessage += fmt.Sprintf("%s https://twitter.com/voyageOS\n\n", "*Twitter:*")
-			startMessage += fmt.Sprintf("*Basic Commands\n*")
-			startMessage += fmt.Sprintf("/info - Show Safe vault info\n")
-			startMessage += fmt.Sprintf("/setup - Sync a Safe vault to this Telegram channel\n")
-			startMessage += fmt.Sprintf("/link - Link your wallet address to your Telegram account\n")
-			startMessage += fmt.Sprintf("/unlink - Unlink your wallet address from your Telegram account\n")
-			startMessage += fmt.Sprintf("/balance - Check Safe vault token balances\n")
-			startMessage += fmt.Sprintf("/queue - Show pending Safe vault transactions\n")
-			startMessage += fmt.Sprintf("/create - Create a new Safe vault transaction\n")
-			startMessage += fmt.Sprintf("/request <amount> <token> - Request funds from Safe vault\n")
-			startMessage += fmt.Sprintf("/leaderboard - Show Safe vault owners leaderboard\n\n")
-			startMessage += fmt.Sprintf("You can add this bot to any group or use the commands above in this chat.\n\n")
+			startMessage += fmt.Sprintf("*How to setup?\n\n*")
+			startMessage += fmt.Sprintf("1. Add the bot to your Telegram group with the button below;\n")
+			startMessage += fmt.Sprintf("2. Use the /setup command to link your Telegram group to your Safe vault;\n")
+			startMessage += fmt.Sprintf("3. Request your group members to /link their addresses to their Telegram accounts;\n")
+			startMessage += fmt.Sprintf("4. Use the /help command for further assistance.\n\n")
 			msg.Text = startMessage
-			startButton := tgbotapi.NewInlineKeyboardMarkup(
-				tgbotapi.NewInlineKeyboardRow(
-					tgbotapi.NewInlineKeyboardButtonURL("Click here to add to a group", os.Getenv("SELF_INVITE")),
-				),
-			)
-			msg.ReplyMarkup = startButton
+			var button tgbotapi.InlineKeyboardMarkup
+			if msg.ChatID > 0 {
+				button = tgbotapi.NewInlineKeyboardMarkup(
+					tgbotapi.NewInlineKeyboardRow(
+						tgbotapi.NewInlineKeyboardButtonURL("Click here to add to a group", os.Getenv("SELF_INVITE")),
+					),
+				)
+			} else {
+				button = service.GetHelperButtons()
+			}
+			msg.ReplyMarkup = button
 			var unsignedMessages []models.SignMessage
 			db.Where("user_id = ?", update.Message.From.ID).Find(&unsignedMessages)
 			for _, unsignedMessage := range unsignedMessages {
@@ -224,7 +241,7 @@ func main() {
 				msg.Text = fmt.Sprintf("You have not verified the message. Please send /link@%v", bot.Self.UserName)
 				break
 			}
-			msg.Text = s.RemoveSigner(signMessage, update.Message.From.UserName)
+			msg.Text = s.RemoveSigner(signMessage)
 		case "request":
 			requestHandler := builder.NewRequestHandler(update.Message.Chat.ID, s, update.Message.From.UserName)
 			args := update.Message.CommandArguments()
@@ -258,6 +275,9 @@ func main() {
 				msg.ParseMode = "Markdown"
 			}
 
+		case "help":
+			service.GetNavigationInstruction(bot, s, update.Message.Chat.ID, &msg)
+			msg.ParseMode = "Markdown"
 		default:
 			msg.Text = "I don't know that command"
 		}

@@ -11,7 +11,6 @@ import (
 	"github.com/thedevsaddam/govalidator"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
-	"github.com/voyage-finance/voyage-tg-server/service/one_time_scipts"
 	"golang.org/x/exp/slices"
 	"gorm.io/gorm"
 	"log"
@@ -143,28 +142,15 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 			return
 		}
 
-		//if signMessage.IsVerified {
-		//	json.NewEncoder(rw).Encode("Message already verified!")
-		//	return
-		//}
-
-		// 4.0 check user existence in db
-		var user models.User
-		err = s.DB.First(&user, signMessage.UserID).Error
-		if err != nil {
-			ReturnHttpBadResponse(rw, fmt.Sprintf("No user in system with id = %v", signMessage.UserID))
-			return
-		}
-
-		// 5.0 check whether signing address exists in Safe UI
+		// 4.0 check whether signing address exists in Safe UI
 		addr := strings.ToLower(message.GetAddress().String()) // lowered addr
 
-		response = s.AddSigner(signMessage.ChatID, user.UserName, addr)
+		response = s.AddSigner(signMessage.ChatID, signMessage.UserID, addr)
 		if response == "" {
 			response = fmt.Sprintf("Added signer, address: %s", addr)
 		}
 
-		// 6.0 update signMessage
+		// 5.0 update signMessage
 		signMessage.IsVerified = true
 		s.DB.Save(&signMessage)
 
@@ -173,7 +159,7 @@ func VerifyMessage(s service.Service) http.HandlerFunc {
 	}
 }
 
-func LinkSafe(s service.Service) http.HandlerFunc {
+func LinkSafe(s service.Service, serverBot *ServerBot) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		// parse request body
 		var linkSafeSerializer LinkSafeSerializer
@@ -227,47 +213,43 @@ func LinkSafe(s service.Service) http.HandlerFunc {
 
 		// No need to check verification of SignMessage in Link logic
 
-		// 4.0 check user existence in db
-		var user models.User
-		err = s.DB.First(&user, signMessage.UserID).Error
-		if err != nil {
-			ReturnHttpBadResponse(rw, fmt.Sprintf("No user in system with id = %v", signMessage.UserID))
-			return
-		}
-
 		// validate chain
 		chainId := message.GetChainID()
 		chain := s.GetSafeChain(chainId)
 
-		// 5.0 save new safeAddress
+		// 4.0 save new safeAddress
 		addr := strings.ToLower(message.GetAddress().String()) // lowered addr
 		chat := s.QueryChat(signMessage.ChatID)
-		// 5.1 update chat if safeAddress is updated
+		// 4.1 update chat if safeAddress is updated
 		if chat.SafeAddress != linkSafeSerializer.SafeAddress {
 			chat.SafeAddress = linkSafeSerializer.SafeAddress
 			chat.Chain = chain
 			s.DB.Save(chat)
 		}
-		// 5.2 have up-to-date chain info
+		// 4.2 have up-to-date chain info
 		if chat.Chain != chain {
 			chat.Chain = chain
 			s.DB.Save(chat)
 		}
 
-		// 5.3 check whether signing address exists in Safe UI
+		// 4.3 check whether signing address exists in Safe UI
 		owners := s.Status(signMessage.ChatID) // lowered in slice
 		if !slices.Contains(owners, addr) {
 			ReturnHttpBadResponse(rw, fmt.Sprintf("This is not owner %v", addr))
 			return
 		}
 
-		one_time_scipts.UpdateChatSignersOwnership(s, *chat)
-		response = s.AddSigner(signMessage.ChatID, user.UserName, addr)
+		//one_time_scripts.UpdateChatSignersOwnership(s, *chat)
+		response = s.AddSigner(signMessage.ChatID, signMessage.UserID, addr)
 		if response == "" {
 			response = fmt.Sprintf("Added signer, address: %s", addr)
 		}
 
-		// 6.0 update signMessage
+		msg := fmt.Sprintf("The Safe=`%v` was set in this chat. Please send /link to bind personal address or send /help to know further instructions", addr)
+		tgMessage := ConstructSignupMessage(msg, chat.ChatId)
+		serverBot.SendBotMessage(tgMessage)
+
+		// 5.0 update signMessage
 		signMessage.IsVerified = true
 		s.DB.Save(&signMessage)
 

@@ -1,4 +1,4 @@
-package one_time_scipts
+package one_time_scripts
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"log"
 )
 
-func UpdateChatSignersOwnership(s service.Service, chat models.Chat) {
+func SaveAllSignersInChat(s service.Service, chat models.Chat) {
 	var signers []models.Signer
 	if chat.Signers != "" {
 		err := json.Unmarshal([]byte(chat.Signers), &signers)
@@ -17,14 +17,18 @@ func UpdateChatSignersOwnership(s service.Service, chat models.Chat) {
 		}
 	}
 	for _, signer := range signers {
-		s.AddSigner(chat.ChatId, signer.Name, signer.Address)
+		signer.ChatID = chat.ChatId
+		var user models.User
+		s.DB.First(&user, "user_name = ?", signer.Name)
+		signer.UserID = user.UserId
+		s.DB.Create(&signer)
 	}
 }
 
-func UpdateAllSignersOwnership(s service.Service) {
+func TransferSignersToTableInAllChats(s service.Service) {
 	var chats []models.Chat
 	s.DB.Find(&chats)
 	for _, chat := range chats {
-		UpdateChatSignersOwnership(s, chat)
+		SaveAllSignersInChat(s, chat)
 	}
 }

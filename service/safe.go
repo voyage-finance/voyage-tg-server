@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"log"
+	"net/http"
 	"strings"
 	"unicode/utf16"
 
@@ -326,16 +327,11 @@ func (s *Service) Status(chatId int64) []string {
 func (s *Service) GetOwnerUsernames(chat *models.Chat) map[string]string {
 	var result = map[string]string{}
 	var signers []models.Signer
-	if chat.Signers != "" {
-		err := json.Unmarshal([]byte(chat.Signers), &signers)
-		if err != nil {
-			log.Printf("Cannot get Signer in Queue request: %s\n", err.Error())
-			return map[string]string{}
-		}
-	}
+	s.DB.Preload("User").Find(&signers, "chat_chat_id = ?", chat.ChatId)
 	for _, signer := range signers {
-		result[strings.ToLower(signer.Address)] = strings.ToLower(signer.Name)
+		result[strings.ToLower(signer.Address)] = strings.ToLower(signer.User.UserName)
 	}
+	log.Println(result, "result")
 	return result
 }
 
@@ -367,4 +363,25 @@ func (s *Service) GetAddressByUsername(chat *models.Chat, username string) strin
 		}
 	}
 	return ""
+}
+
+func PingSafe(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	pingUrl := "https://safe-client.safe.global/v1/chains"
+	res, err := http.Get(pingUrl)
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+	if err != nil {
+		msg.Text = "Safe Gnosis error: " + err.Error()
+		if _, err := bot.Send(msg); err != nil {
+			log.Println(err)
+		}
+		return
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		msg.Text = "Safe Gnosis is unavailable!"
+		if _, err := bot.Send(msg); err != nil {
+			log.Println(err)
+		}
+	}
 }
