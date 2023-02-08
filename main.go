@@ -67,9 +67,6 @@ func main() {
 
 	s := service.Service{DB: db, Client: client, EthClient: ethClient, Tokens: tokenInfo}
 
-	// 1 time job
-	//one_time_scripts.TransferSignersToTableInAllChats(s)
-
 	go http_server.HandleRequests(s)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_KEY"))
