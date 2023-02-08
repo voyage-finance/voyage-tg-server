@@ -7,6 +7,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/config"
+	"github.com/voyage-finance/voyage-tg-server/contracts/llama"
 	"github.com/voyage-finance/voyage-tg-server/http_server"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
@@ -21,6 +22,11 @@ import (
 )
 
 func main() {
+	handler := llama.NewLlamaHandler()
+	encoded, _ := handler.EncodeCreateStream("0xEB8fb2f6D41706759B8544D5adA16FC710211ca2", 38580246913580)
+	log.Println(encoded, "encoded-----")
+	return
+
 	config.Init()
 	dsn := fmt.Sprintf("host=%v "+
 		"user=%v "+
