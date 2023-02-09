@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -43,12 +42,14 @@ func main() {
 		panic("failed to connect database")
 	}
 
-	// Migrate the schema
+	// Migrate the schema <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	//db.AutoMigrate(&models.User{})
 	//db.AutoMigrate(&models.Chat{})
 
 	//db.AutoMigrate(&models.User{}, &models.Chat{}, &models.Signer{})
 	//db.SetupJoinTable(&models.Chat{}, "Users", &models.Signer{})
+
+	// Migrate the schema END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 	tokens, err := os.ReadFile("tokens.json")
 	if err != nil {
@@ -69,7 +70,7 @@ func main() {
 	}
 
 	s := service.Service{DB: db, Client: client, EthClient: ethClient, Tokens: tokenInfo}
-
+	contractsHandlers := *handlers.NewContractHandlers(&s)
 	go http_server.HandleRequests(s)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_KEY"))
@@ -275,31 +276,10 @@ func main() {
 				msg.ParseMode = "Markdown"
 			}
 		case "stream":
-			handler := handlers.NewLlamaHandler()
-
-			// todo need probably handle these parameters
-
-			// approve
-			erc20Handler := handlers.NewErc20Handler()
-			spender := "0xA692FF8Fc672B513f7850C75465415437FE25617"
-			// use ERC20 as example
-			erc20 := "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
-			value := 10000000000000
-			approveData, _ := erc20Handler.EncodeApprove(spender, int64(value))
-			approve := handler.EncodePacked(approveData, erc20, 0)
-
-			// todo we don't need considering deposit?
-
-			// create stream
-			payee := "0xEB8fb2f6D41706759B8544D5adA16FC710211ca2"
-			llama := "0xA692FF8Fc672B513f7850C75465415437FE25617"
-			amountPerSec := 38580246913580
-			streamData, _ := handler.EncodeCreateStream(payee, int64(amountPerSec))
-			creatStream := handler.EncodePacked(streamData, llama, 0)
-
-			// concat
-			tns := append(approve, creatStream...)
-			msg.Text = hexutil.Encode(tns)
+			log.Println(contractsHandlers.LlamaHandler.GetLlamaTokenContract("matic"))
+			args := update.Message.CommandArguments()
+			msg.Text = contractsHandlers.LlamaHandler.Handle(update.Message.Chat.ID, args)
+			msg.ParseMode = "Markdown"
 
 		case "help":
 			service.GetNavigationInstruction(bot, s, update.Message.Chat.ID, &msg)

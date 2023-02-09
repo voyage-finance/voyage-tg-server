@@ -167,10 +167,11 @@ func (s *Service) ParseBalance(bal string, decimals int32) string {
 
 }
 
-func (s *Service) SerializeBalance(bal string, decimals int32) string {
+func (s *Service) SerializeBalance(bal string, decimals int32) float64 {
 	formatBalance, _ := decimal.NewFromString(bal)
 	formatBalance = formatBalance.Shift(decimals)
-	return formatBalance.String()
+	result, _ := formatBalance.Float64()
+	return result
 
 }
 

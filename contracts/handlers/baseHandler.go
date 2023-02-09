@@ -8,6 +8,11 @@ import (
 	"os"
 )
 
+type IContractHandler interface {
+	EncodePacked(data []byte, toAddress string, valueInt uint64) []byte
+	EncodeFunc(functionName string, args ...interface{}) ([]byte, error)
+}
+
 type BaseHandler struct {
 	ABI abi.ABI
 }
