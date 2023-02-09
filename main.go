@@ -277,12 +277,7 @@ func main() {
 		case "stream":
 			handler := handlers.NewLlamaHandler()
 
-			// create stream
-			payee := "0xEB8fb2f6D41706759B8544D5adA16FC710211ca2"
-			llama := "0xA692FF8Fc672B513f7850C75465415437FE25617"
-			amountPerSec := 38580246913580
-			streamData, _ := handler.EncodeCreateStream(payee, int64(amountPerSec))
-			creatStream := handler.EncodePacked(streamData, llama, 0)
+			// todo need probably handle these parameters
 
 			// approve
 			erc20Handler := handlers.NewErc20Handler()
@@ -292,6 +287,15 @@ func main() {
 			value := 10000000000000
 			approveData, _ := erc20Handler.EncodeApprove(spender, int64(value))
 			approve := handler.EncodePacked(approveData, erc20, 0)
+
+			// todo we don't need considering deposit?
+
+			// create stream
+			payee := "0xEB8fb2f6D41706759B8544D5adA16FC710211ca2"
+			llama := "0xA692FF8Fc672B513f7850C75465415437FE25617"
+			amountPerSec := 38580246913580
+			streamData, _ := handler.EncodeCreateStream(payee, int64(amountPerSec))
+			creatStream := handler.EncodePacked(streamData, llama, 0)
 
 			// concat
 			tns := append(approve, creatStream...)
