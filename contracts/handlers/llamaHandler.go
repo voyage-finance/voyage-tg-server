@@ -133,8 +133,8 @@ func (llamaHandler *LlamaHandler) getCreateStream(streamRequest *StreamRequest, 
 
 func (llamaHandler *LlamaHandler) CreateStream(streamRequest *StreamRequest) []MultiSignaturePayload {
 	result := []MultiSignaturePayload{}
-	//value := llamaHandler.s.SerializeBalance(fmt.Sprintf("%f", streamRequest.Amount), 20)
-	value := streamRequest.Amount * 10e20
+	value := llamaHandler.s.SerializeBalance(fmt.Sprintf("%f", streamRequest.Amount), streamRequest.TokenContract.Decimals)
+	valueStream := streamRequest.Amount * 10e20
 	// approve
 	approve := llamaHandler.getApprove(streamRequest, value)
 	result = append(result, approve)
@@ -142,7 +142,7 @@ func (llamaHandler *LlamaHandler) CreateStream(streamRequest *StreamRequest) []M
 	deposit := llamaHandler.getDeposit(streamRequest, value)
 	result = append(result, deposit)
 	// create stream
-	creatStream := llamaHandler.getCreateStream(streamRequest, value/streamRequest.TotalSeconds)
+	creatStream := llamaHandler.getCreateStream(streamRequest, valueStream/streamRequest.TotalSeconds)
 	result = append(result, creatStream)
 
 	//tns := append(approve, creatStream...)
