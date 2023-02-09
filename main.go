@@ -276,7 +276,6 @@ func main() {
 				msg.ParseMode = "Markdown"
 			}
 		case "stream":
-			log.Println(contractsHandlers.LlamaHandler.GetLlamaTokenContract("matic"))
 			args := update.Message.CommandArguments()
 			msg.Text = contractsHandlers.LlamaHandler.Handle(update.Message.Chat.ID, args)
 			msg.ParseMode = "Markdown"

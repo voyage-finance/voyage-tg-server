@@ -167,7 +167,7 @@ func (llamaHandler *LlamaHandler) ValidateArgs(argString string, chat *models.Ch
 	var recipientSigner models.Signer
 	err := llamaHandler.s.DB.First(&recipientSigner, "chat_chat_id = ? AND name = ?", chat.ChatId, recipient).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, fmt.Sprintf("@%v user does not exist in the chat", recipient)
+		return nil, fmt.Sprintf("*@%v* user does not exist in the chat", recipient)
 	}
 
 	// 3.0 currency check, should start from $
