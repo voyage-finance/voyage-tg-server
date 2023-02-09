@@ -13,7 +13,7 @@ func NewLlamaHandler() *LlamaHandler {
 	return &LlamaHandler{*NewBaseHandler("contracts/abis/llama.json")}
 }
 
-func (llamaHandler *LlamaHandler) EncodeCreateStream(address string, amountPerSec int64) (string, error) {
+func (llamaHandler *LlamaHandler) EncodeCreateStream(address string, amountPerSec int64) ([]byte, error) {
 	methodName := "createStream"
 	addressBytes := common.HexToAddress(address)
 	amountPerSecBigInt := big.NewInt(amountPerSec)

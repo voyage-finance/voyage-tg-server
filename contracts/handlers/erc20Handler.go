@@ -13,7 +13,7 @@ func NewErc20Handler() *Erc20Handler {
 	return &Erc20Handler{*NewBaseHandler("contracts/abis/erc20.json")}
 }
 
-func (erc20Handler *Erc20Handler) EncodeApprove(spender string, value int64) (string, error) {
+func (erc20Handler *Erc20Handler) EncodeApprove(spender string, value int64) ([]byte, error) {
 	methodName := "approve"
 	addressBytes := common.HexToAddress(spender)
 	valueBigInt := big.NewInt(value)
