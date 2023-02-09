@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -22,15 +23,6 @@ import (
 )
 
 func main() {
-	handler := handlers.NewLlamaHandler()
-	encoded, _ := handler.EncodeCreateStream("0xEB8fb2f6D41706759B8544D5adA16FC710211ca2", 38580246913580)
-	log.Println(encoded, "EncodeCreateStream-----")
-	log.Println(handler.EncodePacked(encoded, "0xA692FF8Fc672B513f7850C75465415437FE25617", 0), "EncodePacked-----")
-
-	erc20Handler := handlers.NewErc20Handler()
-	approveEncoded, _ := erc20Handler.EncodeApprove("0xA692FF8Fc672B513f7850C75465415437FE25617", 10000000000000)
-	log.Println(approveEncoded, "approveEncoded-----")
-	return
 
 	config.Init()
 	dsn := fmt.Sprintf("host=%v "+
@@ -282,6 +274,28 @@ func main() {
 				msg.ReplyMarkup = startButton
 				msg.ParseMode = "Markdown"
 			}
+		case "stream":
+			handler := handlers.NewLlamaHandler()
+
+			// create stream
+			payee := "0xEB8fb2f6D41706759B8544D5adA16FC710211ca2"
+			llama := "0xA692FF8Fc672B513f7850C75465415437FE25617"
+			amountPerSec := 38580246913580
+			streamData, _ := handler.EncodeCreateStream(payee, int64(amountPerSec))
+			creatStream := handler.EncodePacked(streamData, llama, 0)
+
+			// approve
+			erc20Handler := handlers.NewErc20Handler()
+			spender := "0xA692FF8Fc672B513f7850C75465415437FE25617"
+			// use ERC20 as example
+			erc20 := "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+			value := 10000000000000
+			approveData, _ := erc20Handler.EncodeApprove(spender, int64(value))
+			approve := handler.EncodePacked(approveData, erc20, 0)
+
+			// concat
+			tns := append(approve, creatStream...)
+			msg.Text = hexutil.Encode(tns)
 
 		case "help":
 			service.GetNavigationInstruction(bot, s, update.Message.Chat.ID, &msg)
