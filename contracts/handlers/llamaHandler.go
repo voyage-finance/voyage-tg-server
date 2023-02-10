@@ -88,7 +88,7 @@ func (llamaHandler *LlamaHandler) GetLlamaTokenContract(chain string) *map[strin
 
 	var symbolContractMap = map[string]TokensType{}
 	for _, token := range contractAddressResponse.Data.Tokens {
-		symbolContractMap[strings.ToLower(token.Symbol)] = token
+		symbolContractMap[strings.ToLower(token.Address)] = token
 	}
 	return &symbolContractMap
 
@@ -181,8 +181,49 @@ func (llamaHandler *LlamaHandler) ValidateArgs(argString string, chat *models.Ch
 	if currencyContracts == nil {
 		return nil, "Error in getting token contract!"
 	}
+	// 3.2 check currency
+	chainId := 1
+	if chat.Chain == "matic" {
+		chainId = 137
+	}
+	url := fmt.Sprintf("https://safe-client.safe.global/v1/chains/%d/safes/%s/balances/usd", chainId, chat.SafeAddress)
+	resp, err := llamaHandler.s.Client.R().EnableTrace().Get(url)
+	if err != nil {
+		log.Printf("get balance error: %s\n", err.Error())
+	}
+
+	type TokenInfo struct {
+		Symbol  string
+		Address string
+	}
+
+	type Item struct {
+		TokenInfo TokenInfo
+	}
+
+	type BalanceRsp struct {
+		Items []Item
+	}
+
+	var balanceRsp BalanceRsp
+	json.Unmarshal(resp.Body(), &balanceRsp)
+
+	var currencyAddr string
+	var ok bool
+	for _, item := range balanceRsp.Items {
+		if strings.ToLower(item.TokenInfo.Symbol) == strings.ToLower(currency) {
+			ok = true
+			currencyAddr = item.TokenInfo.Address
+			break
+		}
+	}
+
+	if !ok {
+		return nil, "Balance is insufficient"
+	}
+
 	// 3.2 check whether currency supported for stream creation
-	tokenContract, ok := currencyContracts[currency]
+	tokenContract, ok := currencyContracts[strings.ToLower(currencyAddr)]
 	if !ok {
 		return nil, "Contract is not supported!"
 	}
