@@ -124,12 +124,12 @@ func (handler *QueuedHandler) HandleConfirmations(id string, confirmationsRequir
 */
 
 func (handler *QueuedHandler) GenerateSignLinkEmbedded(id string) string {
-	link := fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", handler.Chain, common.HexToAddress(handler.SafeAddress), id)
+	link := fmt.Sprintf("https://voyage-safe.vercel.app/%s:%s/transactions/tx?id=%v", handler.Chain, common.HexToAddress(handler.SafeAddress), id)
 	return fmt.Sprintf("\n[✍️ Sign/Submit it!](%v)\n\n----------\n", link)
 }
 
 func (handler *QueuedHandler) GenerateSignLink(id string) string {
-	return fmt.Sprintf("https://app.safe.global/%s:%s/transactions/tx?id=%v", handler.Chain, common.HexToAddress(handler.SafeAddress), id)
+	return fmt.Sprintf("https://voyage-safe.vercel.app/%s:%s/transactions/tx?id=%v", handler.Chain, common.HexToAddress(handler.SafeAddress), id)
 }
 
 func (handler *QueuedHandler) HandleTransaction(transaction common2.Transaction, returnEmbedded bool) (string, string, bool) {
