@@ -72,7 +72,7 @@ func (createHandler *CreateHandler) SendCreateDM() string {
 
 	dmMsg := tgbotapi.NewMessage(createHandler.update.Message.From.ID, dmText)
 
-	link := fmt.Sprintf("%v/safes/%v:%v/transactions/create?&chatId=%v",
+	link := fmt.Sprintf("%v/%v:%v/transactions/create?&chatId=%v",
 		os.Getenv("FRONT_URL"),
 		createHandler.chat.Chain,
 		createHandler.chat.SafeAddress,

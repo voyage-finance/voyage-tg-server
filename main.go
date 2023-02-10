@@ -7,6 +7,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/voyage-finance/voyage-tg-server/config"
+	"github.com/voyage-finance/voyage-tg-server/contracts/handlers"
 	"github.com/voyage-finance/voyage-tg-server/http_server"
 	"github.com/voyage-finance/voyage-tg-server/models"
 	"github.com/voyage-finance/voyage-tg-server/service"
@@ -21,6 +22,7 @@ import (
 )
 
 func main() {
+
 	config.Init()
 	dsn := fmt.Sprintf("host=%v "+
 		"user=%v "+
@@ -40,12 +42,14 @@ func main() {
 		panic("failed to connect database")
 	}
 
-	// Migrate the schema
+	// Migrate the schema <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 	//db.AutoMigrate(&models.User{})
 	//db.AutoMigrate(&models.Chat{})
 
 	//db.AutoMigrate(&models.User{}, &models.Chat{}, &models.Signer{})
 	//db.SetupJoinTable(&models.Chat{}, "Users", &models.Signer{})
+
+	// Migrate the schema END >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 	tokens, err := os.ReadFile("tokens.json")
 	if err != nil {
@@ -66,10 +70,7 @@ func main() {
 	}
 
 	s := service.Service{DB: db, Client: client, EthClient: ethClient, Tokens: tokenInfo}
-
-	// 1 time job
-	//one_time_scripts.TransferSignersToTableInAllChats(s)
-
+	contractsHandlers := *handlers.NewContractHandlers(&s)
 	go http_server.HandleRequests(s)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_KEY"))
@@ -274,6 +275,10 @@ func main() {
 				msg.ReplyMarkup = startButton
 				msg.ParseMode = "Markdown"
 			}
+		case "stream":
+			args := update.Message.CommandArguments()
+			msg.Text = contractsHandlers.LlamaHandler.Handle(update.Message.Chat.ID, args)
+			msg.ParseMode = "Markdown"
 
 		case "help":
 			service.GetNavigationInstruction(bot, s, update.Message.Chat.ID, &msg)
