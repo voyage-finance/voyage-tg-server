@@ -46,10 +46,20 @@ func (handler *QueuedHandler) HandleCustom(custom common2.Transaction) string {
 
 	} else {
 		methodName := strings.ToUpper(custom.TxInfo.MethodName)
-		amount := handler.s.ParseBalance(custom.TxInfo.Value, 18)
+		var amount string
+		switch methodName {
+		case "MULTISEND":
+			amount = fmt.Sprintf("%v action(s)", custom.TxInfo.ActionCount)
+		default:
+			amount = handler.s.ParseBalance(custom.TxInfo.Value, 18)
+
+		}
 		currency := strings.ToUpper(custom.TxInfo.To.Name)
-		appName := custom.SafeAppInfo.Name
-		value = fmt.Sprintf("%v %v `%v` in app *%v*", methodName, amount, currency, appName)
+		appName := ""
+		if custom.SafeAppInfo.Name != "" {
+			appName = fmt.Sprintf("in app *%v*", custom.SafeAppInfo.Name)
+		}
+		value = fmt.Sprintf("%v %v `%v` %v", methodName, amount, currency, appName)
 		value += fmt.Sprintf(" (nonce=`%v`):\n\n", custom.ExecutionInfo.Nonce)
 		value += fmt.Sprintf("*To*: `%v`\n\n", custom.TxInfo.To.Value)
 	}
