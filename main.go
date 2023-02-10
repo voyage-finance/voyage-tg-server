@@ -158,7 +158,7 @@ func main() {
 				}
 			}
 
-			url := fmt.Sprintf("https://app.safe.global/%s:%s/home", chat.Chain, chat.SafeAddress)
+			url := fmt.Sprintf("https://voyage-safe.vercel.app/%s:%s/home", chat.Chain, chat.SafeAddress)
 			var safeButton = tgbotapi.NewInlineKeyboardMarkup(
 				tgbotapi.NewInlineKeyboardRow(
 					tgbotapi.NewInlineKeyboardButtonURL("Link", url),
