@@ -187,7 +187,6 @@ func (llamaHandler *LlamaHandler) ValidateArgs(argString string, chat *models.Ch
 		chainId = 137
 	}
 	url := fmt.Sprintf("https://safe-client.safe.global/v1/chains/%d/safes/%s/balances/usd", chainId, chat.SafeAddress)
-	log.Println("request url: ", url)
 	resp, err := llamaHandler.s.Client.R().EnableTrace().Get(url)
 	if err != nil {
 		log.Printf("get balance error: %s\n", err.Error())
@@ -212,7 +211,6 @@ func (llamaHandler *LlamaHandler) ValidateArgs(argString string, chat *models.Ch
 	var currencyAddr string
 	var ok bool
 	for _, item := range balanceRsp.Items {
-		fmt.Printf("item.symbol: %s\n", item.TokenInfo.Symbol)
 		if strings.ToLower(item.TokenInfo.Symbol) == strings.ToLower(currency) {
 			ok = true
 			currencyAddr = item.TokenInfo.Address
