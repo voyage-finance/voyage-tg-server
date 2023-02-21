@@ -30,7 +30,6 @@ func (llamaHandler *LlamaHandler) EncodeCreateStream(address string, amountPerSe
 	methodName := "createStream"
 	addressBytes := common.HexToAddress(address)
 	amountPerSecBigInt := big.NewInt(amountPerSec)
-	log.Println("amountPerSec", amountPerSec)
 	if amountPerSecBigInt == big.NewInt(0) {
 		return nil, errors.New("Provided amount for period duration is too small. Please increase amount or choose other duration!")
 	}
@@ -96,7 +95,7 @@ func (llamaHandler *LlamaHandler) GetLlamaTokenContract(chain string) *map[strin
 
 // Token Contract part END
 
-func (llamaHandler *LlamaHandler) getApprove(streamRequest *StreamRequest, value float64) MultiSignaturePayload {
+func (llamaHandler *LlamaHandler) GetApprove(streamRequest *StreamRequest, value float64) MultiSignaturePayload {
 	spender := streamRequest.TokenContract.Contract.Id // "0xA692FF8Fc672B513f7850C75465415437FE25617"
 
 	erc20 := streamRequest.TokenContract.Address // "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
@@ -108,7 +107,7 @@ func (llamaHandler *LlamaHandler) getApprove(streamRequest *StreamRequest, value
 	}
 }
 
-func (llamaHandler *LlamaHandler) getDeposit(streamRequest *StreamRequest, amountToDeposit float64) MultiSignaturePayload {
+func (llamaHandler *LlamaHandler) GetDeposit(streamRequest *StreamRequest, amountToDeposit float64) MultiSignaturePayload {
 	llama := streamRequest.TokenContract.Contract.Id
 	encodedDepositData, _ := llamaHandler.EncodeDeposit(amountToDeposit)
 	//encodedDeposit := llamaHandler.EncodePacked(encodedDepositData, llama, 0)
@@ -119,7 +118,7 @@ func (llamaHandler *LlamaHandler) getDeposit(streamRequest *StreamRequest, amoun
 	}
 }
 
-func (llamaHandler *LlamaHandler) getCreateStream(streamRequest *StreamRequest, amountPerSec float64) MultiSignaturePayload {
+func (llamaHandler *LlamaHandler) GetCreateStream(streamRequest *StreamRequest, amountPerSec float64) MultiSignaturePayload {
 	llama := streamRequest.TokenContract.Contract.Id
 	payee := streamRequest.Recipient.Address // "0xEB8fb2f6D41706759B8544D5adA16FC710211ca2"
 	streamData, _ := llamaHandler.EncodeCreateStream(payee, int64(amountPerSec))
@@ -136,19 +135,37 @@ func (llamaHandler *LlamaHandler) CreateStream(streamRequest *StreamRequest) []M
 	value := llamaHandler.s.SerializeBalance(fmt.Sprintf("%f", streamRequest.Amount), streamRequest.TokenContract.Decimals)
 	valueStream := streamRequest.Amount * 10e20
 	// approve
-	approve := llamaHandler.getApprove(streamRequest, value)
+	approve := llamaHandler.GetApprove(streamRequest, value)
 	result = append(result, approve)
 	// deposit
-	deposit := llamaHandler.getDeposit(streamRequest, value)
+	deposit := llamaHandler.GetDeposit(streamRequest, value)
 	result = append(result, deposit)
 	// create stream
-	creatStream := llamaHandler.getCreateStream(streamRequest, valueStream/streamRequest.TotalSeconds)
+	creatStream := llamaHandler.GetCreateStream(streamRequest, valueStream/streamRequest.TotalSeconds)
 	result = append(result, creatStream)
 
 	//tns := append(approve, creatStream...)
 	//return hexutil.Encode(tns)
 
 	return result
+}
+
+func (llamaHandler *LlamaHandler) GetTotalSeconds(duration string, periodFloat float64) (float64, string) {
+	if len(duration) < 3 {
+		return 0, "Incorrect format for duration. Choose: day/month/year"
+	}
+	var totalSeconds = float64(86400) // secs in 1 day
+	switch duration[:3] {
+	case "day":
+		totalSeconds *= periodFloat
+	case "mon":
+		totalSeconds *= periodFloat * float64(30)
+	case "yea":
+		totalSeconds *= periodFloat * float64(365)
+	default:
+		return 0, "Incorrect format for duration. Choose: day/month/year"
+	}
+	return totalSeconds, ""
 }
 
 func (llamaHandler *LlamaHandler) ValidateArgs(argString string, chat *models.Chat) (*StreamRequest, string) {
@@ -234,21 +251,10 @@ func (llamaHandler *LlamaHandler) ValidateArgs(argString string, chat *models.Ch
 		return nil, err.Error()
 	}
 	// 4.1 check duration
-	var totalSeconds = float64(86400) // secs in 1 day
-	if len(duration) < 3 {
-		return nil, "Incorrect format for duration. Choose: day/month/year"
+	totalSeconds, errorStr := llamaHandler.GetTotalSeconds(duration, periodFloat)
+	if errorStr != "" {
+		return nil, errorStr
 	}
-	switch duration[:3] {
-	case "day":
-		totalSeconds *= periodFloat
-	case "mon":
-		totalSeconds *= periodFloat * float64(30)
-	case "yea":
-		totalSeconds *= periodFloat * float64(365)
-	default:
-		return nil, "Incorrect format for duration. Choose: day/month/year"
-	}
-
 	// 5.0 check amount
 	amountFloat, err := strconv.ParseFloat(amount, 64)
 	if err != nil {
