@@ -71,7 +71,7 @@ func main() {
 
 	s := service.Service{DB: db, Client: client, EthClient: ethClient, Tokens: tokenInfo}
 	contractsHandlers := *handlers.NewContractHandlers(&s)
-	go http_server.HandleRequests(s)
+	go http_server.HandleRequests(s, contractsHandlers.LlamaHandler)
 
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("BOT_API_KEY"))
 	if err != nil {
